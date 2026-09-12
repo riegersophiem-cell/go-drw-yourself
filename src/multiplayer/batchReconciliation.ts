@@ -44,6 +44,38 @@ export type BatchDecision =
   | { kind: "accept"; resetQueue: boolean }
   | { kind: "discard"; reason: "STALE_ROUND_ECHO" | "SUPERSEDED" | "REFETCH_BEHIND_BATCH" | "DUPLICATE_OR_OLD" | "VERSION_GAP" };
 
+export type BroadcastReconciliation =
+  | { kind: "no_state" }
+  | { kind: "invalid_payload" }
+  | { kind: "batch"; batch: GameEventBatch; decision: BatchDecision };
+
+/**
+ * Refetches authoritative state for every state_changed notification before
+ * deciding whether its untrusted payload is useful for presentation. A bad
+ * payload may suppress animation events, but must never suppress the state
+ * update that the notification announces.
+ */
+export async function reconcileBroadcastPayload(params: {
+  payload: unknown;
+  lastKnown: KnownRoundState | null;
+  refetchAuthoritative: () => Promise<KnownRoundState | null>;
+}): Promise<BroadcastReconciliation> {
+  const refetched = await params.refetchAuthoritative();
+  if (!refetched) return { kind: "no_state" };
+  if (!validateBatchShape(params.payload)) return { kind: "invalid_payload" };
+  const batch = params.payload as GameEventBatch;
+  return {
+    kind: "batch",
+    batch,
+    decision: decideBatchAcceptance({
+      batch,
+      refetchedGameId: refetched.gameId,
+      refetchedVersion: refetched.version,
+      lastKnown: params.lastKnown,
+    }),
+  };
+}
+
 /**
  * Decides whether a structurally valid batch may be enqueued for later
  * presentation (BOT_TURN_ARCHITECTURE.md §6.2/§6.4).

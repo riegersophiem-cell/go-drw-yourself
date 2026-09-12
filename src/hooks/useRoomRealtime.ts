@@ -2,8 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { fetchPlayers, fetchPrivateState, fetchPublicState } from "../multiplayer/api";
 import { supabase } from "../supabase/client";
 import type { PrivatePlayerState, PublicGameState } from "../game/types";
-import type { GameEventBatch } from "../game/gameEvents";
-import { decideBatchAcceptance, validateBatchShape, type KnownRoundState } from "../multiplayer/batchReconciliation";
+import { reconcileBroadcastPayload, type KnownRoundState } from "../multiplayer/batchReconciliation";
 import { useEventPresentation } from "./useEventPresentation";
 
 export interface RoomPlayerRow {
@@ -50,19 +49,22 @@ export function useRoomRealtime(roomId: string | null, device?: { deviceId: stri
   }
 
   async function handleBatchBroadcast(currentRoomId: string, payload: unknown) {
-    if (!validateBatchShape(payload)) {
+    const lastKnown = lastKnownRef.current;
+    const result = await reconcileBroadcastPayload({
+      payload,
+      lastKnown,
+      refetchAuthoritative: async () => {
+        const pub = await refetchAll(currentRoomId);
+        return pub ? { gameId: pub.gameId, version: pub.version } : null;
+      },
+    });
+    if (result.kind === "invalid_payload") {
       console.error("discarding structurally invalid batch broadcast", payload);
       return;
     }
-    const batch = payload as GameEventBatch;
-    const lastKnown = lastKnownRef.current;
-    const pub = await refetchAll(currentRoomId); // always authoritative, regardless of the batch's own fate
-    if (!pub) return;
-
-    const decision = decideBatchAcceptance({ batch, refetchedGameId: pub.gameId, refetchedVersion: pub.version, lastKnown });
-    if (decision.kind === "discard") return;
-    if (decision.resetQueue) presentation.resetQueue();
-    presentation.enqueueBatch(batch);
+    if (result.kind !== "batch" || result.decision.kind === "discard") return;
+    if (result.decision.resetQueue) presentation.resetQueue();
+    presentation.enqueueBatch(result.batch);
   }
 
   useEffect(() => {

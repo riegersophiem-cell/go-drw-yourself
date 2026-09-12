@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { decideBatchAcceptance, validateBatchShape } from "../src/multiplayer/batchReconciliation";
+import { decideBatchAcceptance, reconcileBroadcastPayload, validateBatchShape } from "../src/multiplayer/batchReconciliation";
 import type { GameEventBatch } from "../src/game/gameEvents";
 
 function batch(overrides: Partial<GameEventBatch> = {}): GameEventBatch {
@@ -163,5 +163,33 @@ describe("decideBatchAcceptance", () => {
       lastKnown: null,
     });
     expect(decision).toEqual({ kind: "accept", resetQueue: true });
+  });
+});
+
+describe("reconcileBroadcastPayload", () => {
+  it("always refetches authoritative state even when the broadcast payload is malformed", async () => {
+    let refetchCount = 0;
+    const result = await reconcileBroadcastPayload({
+      payload: { version: 7 },
+      lastKnown: { gameId: "game-a", version: 6 },
+      refetchAuthoritative: async () => {
+        refetchCount += 1;
+        return { gameId: "game-a", version: 7 };
+      },
+    });
+
+    expect(refetchCount).toBe(1);
+    expect(result).toEqual({ kind: "invalid_payload" });
+  });
+
+  it("returns a valid batch decision after the authoritative refetch", async () => {
+    const value = batch({ fromVersion: 6, toVersion: 7 });
+    const result = await reconcileBroadcastPayload({
+      payload: value,
+      lastKnown: { gameId: "game-a", version: 6 },
+      refetchAuthoritative: async () => ({ gameId: "game-a", version: 7 }),
+    });
+
+    expect(result).toEqual({ kind: "batch", batch: value, decision: { kind: "accept", resetQueue: false } });
   });
 });
