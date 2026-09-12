@@ -149,13 +149,15 @@ export function PlayerGame({ session }: PlayerGameProps) {
         </button>
       )}
 
-      <PlayerHand
-        cards={privateState.ownHand}
-        legalInstanceIds={needsExtraDiscard ? privateState.ownHand.map((c) => c.instanceId) : isMyTurn ? privateState.legalMoves : []}
-        selectedInstanceId={selected}
-        disabled={!isMyTurn || busy}
-        onSelect={handleSelect}
-      />
+      <div className={`player-game__hand-wrap ${needsSwapTarget || needsSkipTarget || needsColor || !!selected ? "player-game__hand-wrap--receded" : ""}`}>
+        <PlayerHand
+          cards={privateState.ownHand}
+          legalInstanceIds={needsExtraDiscard ? privateState.ownHand.map((c) => c.instanceId) : isMyTurn ? privateState.legalMoves : []}
+          selectedInstanceId={selected}
+          disabled={!isMyTurn || busy || needsSwapTarget || needsSkipTarget || needsColor || !!selected}
+          onSelect={handleSelect}
+        />
+      </div>
     </div>
   );
 }

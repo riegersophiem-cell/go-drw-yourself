@@ -19,7 +19,10 @@ export function buildPrivatePlayerState(
   return {
     playerId,
     ownHand: hand.cardInstanceIds.map((instanceId) => ({ instanceId, def: definitionOfInstance(state, instanceId) })),
-    legalMoves: state.currentPlayerId === playerId ? getLegalMoves(state, playerId, ruleset) : [],
+    // Legal moves only make sense while the player can actually play or draw —
+    // during a follow-up phase (color/swap/skip target, extra discard) the
+    // previous move's legality no longer applies to anything.
+    legalMoves: state.currentPlayerId === playerId && state.phase === "WAITING_FOR_PLAY" ? getLegalMoves(state, playerId, ruleset) : [],
     publicState: toPublicGameState(state),
   };
 }

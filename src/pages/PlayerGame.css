@@ -43,9 +43,28 @@
   margin-bottom: 12px;
 }
 
+.player-game__hand-wrap {
+  transition: opacity 0.15s ease, filter 0.15s ease;
+}
+
+.player-game__hand-wrap--receded {
+  opacity: 0.35;
+  filter: grayscale(0.6) blur(1px);
+  pointer-events: none;
+}
+
 .color-picker {
   text-align: center;
-  padding: 12px;
+  padding: 16px 12px;
+  background: rgba(250, 204, 21, 0.08);
+  border-top: 1px solid rgba(250, 204, 21, 0.35);
+  border-bottom: 1px solid rgba(250, 204, 21, 0.35);
+}
+
+.color-picker p {
+  margin: 0 0 12px;
+  font-weight: 700;
+  color: #facc15;
 }
 
 .color-picker__options {

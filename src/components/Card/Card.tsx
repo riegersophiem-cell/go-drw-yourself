@@ -1,4 +1,5 @@
-import { PLAIN_SYMBOL_TYPES, type CardColor, type CardDefinition, type CardType } from "../../game/types";
+import { PLAIN_SYMBOL_TYPES, type CardColor, type CardDefinition } from "../../game/types";
+import { CardIcon } from "./CardIcons";
 import "./Card.css";
 
 const COLOR_HEX: Record<CardColor, string> = {
@@ -9,36 +10,9 @@ const COLOR_HEX: Record<CardColor, string> = {
   WILD: "#18181b",
 };
 
-// Former 0-9 number cards carry no visible digits any more — each ex-slot
-// gets a distinct symbol/action glyph instead (see game/types.ts CardType).
-const SYMBOL_BY_TYPE: Record<CardType, string> = {
-  TRIANGLE: "▲",
-  SQUARE: "■",
-  CIRCLE: "●",
-  DIAMOND: "◆",
-  SEMICIRCLE: "◖",
-  ROTATE_HANDS: "🔁",
-  TARGET_SKIP: "🎯",
-  GIVE_TWO_TO_LOWEST: "🔻+2",
-  DISCARD_ONE_EXTRA: "-1",
-  SWAP_HAND: "⇄",
-  SKIP: "⦸",
-  REVERSE: "↺",
-  DRAW_1: "+1",
-  DRAW_2: "+2",
-  WILD: "★",
-  WILD_DRAW_4: "+4",
-  WILD_DRAW_6: "+6",
-  WILD_DRAW_10: "+10",
-  SKIP_EVERYONE: "⦸⦸",
-  DISCARD_ALL: "ALL",
-  WILD_REVERSE_DRAW_4: "↺+4",
-  WILD_COLOR_ROULETTE: "🎡",
-};
-
 // Accessible/plain-language names (section 27 of the UI/UX brief): symbols
 // alone must never be the only way to understand a card's function.
-const ACCESSIBLE_NAME_BY_TYPE: Record<CardType, string> = {
+const ACCESSIBLE_NAME_BY_TYPE: Record<CardDefinition["type"], string> = {
   TRIANGLE: "Dreieck",
   SQUARE: "Quadrat",
   CIRCLE: "Kreis",
@@ -83,7 +57,6 @@ export function Card({ def, playable = true, selected = false, faceDown = false,
   }
 
   const color = COLOR_HEX[def.color];
-  const symbol = SYMBOL_BY_TYPE[def.type] ?? "?";
   const accessibleName = ACCESSIBLE_NAME_BY_TYPE[def.type] ?? def.type;
   const action = isActionCard(def);
 
@@ -97,9 +70,9 @@ export function Card({ def, playable = true, selected = false, faceDown = false,
       title={accessibleName}
       aria-label={`${def.color !== "WILD" ? def.color + " " : ""}${accessibleName}`}
     >
-      <span className="uno-card__corner uno-card__corner--top">{symbol}</span>
-      <span className="uno-card__symbol">{symbol}</span>
-      <span className="uno-card__corner uno-card__corner--bottom">{symbol}</span>
+      <span className="uno-card__icon">
+        <CardIcon type={def.type} />
+      </span>
     </button>
   );
 }

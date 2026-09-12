@@ -36,7 +36,12 @@ export function Home() {
 
   return (
     <div className="page page--centered">
-      <h1 className="brand-title">UNO Show 'Em<br />No Mercy</h1>
+      <h1 className="brand-title brand-title--hero">
+        GO DR<span className="brand-title__censor">*</span>W
+        <br />
+        YOURSELF
+      </h1>
+      <p className="brand-tagline">Swap it. Stack it. Make it someone else's problem.</p>
       <div className="panel">
         <label className="field-label" htmlFor="name">
           Dein Name

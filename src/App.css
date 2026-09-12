@@ -31,6 +31,25 @@ body {
   text-shadow: 0 2px 8px rgba(250, 204, 21, 0.3);
 }
 
+.brand-title--hero {
+  font-size: 2.4rem;
+  line-height: 1.05;
+  color: #f4f4f5;
+  text-shadow: none;
+}
+
+.brand-title__censor {
+  color: #f43f5e;
+  padding: 0 0.02em;
+}
+
+.brand-tagline {
+  color: #a1a1aa;
+  font-size: 0.95rem;
+  font-style: italic;
+  margin-top: -8px;
+}
+
 .panel {
   display: flex;
   flex-direction: column;

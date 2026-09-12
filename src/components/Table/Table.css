@@ -1,7 +1,7 @@
 .table-board {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 12px;
   padding: 24px;
   height: 100%;
   box-sizing: border-box;
@@ -10,21 +10,9 @@
 }
 
 .table-board--compact {
-  gap: 10px;
+  gap: 6px;
   padding: 12px;
   min-height: 0;
-}
-
-.table-board--compact .table-board__players {
-  gap: 8px;
-}
-
-.table-board--compact .table-board__player {
-  padding: 4px 10px;
-}
-
-.table-board--compact .table-board__center {
-  gap: 24px;
 }
 
 .table-board--compact .table-board__turn-banner {
@@ -32,29 +20,44 @@
   padding: 6px 16px;
 }
 
-.table-board__player--own {
-  outline: 2px solid #a1a1aa;
+/* The arena is the circular table itself: players sit on an ellipse around
+   the rim (see Table.tsx seatStyle), the draw/discard piles sit dead center. */
+.table-board__arena {
+  position: relative;
+  flex: 1;
+  min-height: 260px;
 }
 
-.table-board__players {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-  justify-content: center;
+.table-board--compact .table-board__arena {
+  min-height: 200px;
 }
 
 .table-board__player {
+  position: absolute;
+  transform: translate(-50%, -50%);
   display: flex;
   flex-direction: column;
   align-items: center;
   padding: 8px 16px;
   border-radius: 10px;
-  background: rgba(0, 0, 0, 0.25);
+  background: rgba(0, 0, 0, 0.35);
+  white-space: nowrap;
+  transition: outline 0.15s ease, background 0.15s ease;
+}
+
+.table-board--compact .table-board__player {
+  padding: 4px 10px;
+  font-size: 0.85rem;
+}
+
+.table-board__player--own {
+  outline: 2px solid #a1a1aa;
 }
 
 .table-board__player--active {
   outline: 2px solid #facc15;
-  background: rgba(250, 204, 21, 0.15);
+  background: rgba(250, 204, 21, 0.2);
+  box-shadow: 0 0 16px rgba(250, 204, 21, 0.4);
 }
 
 .table-board__player-name {
@@ -64,6 +67,10 @@
 .table-board__player-count {
   font-size: 0.85rem;
   color: #d4d4d8;
+}
+
+.table-board--compact .table-board__player-count {
+  font-size: 0.75rem;
 }
 
 .table-board__skip-stamp {
@@ -78,38 +85,41 @@
 }
 
 .table-board__center {
-  flex: 1;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 48px;
+  gap: 28px;
 }
 
 .table-board__pile {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   position: relative;
 }
 
 .table-board__pile-label {
-  font-size: 0.8rem;
+  font-size: 0.7rem;
   color: #d4d4d8;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
 .table-board__pile-count {
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   color: #d4d4d8;
 }
 
 .table-board__active-color {
   position: absolute;
-  bottom: -14px;
-  width: 16px;
-  height: 16px;
+  bottom: -12px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
   border: 2px solid white;
 }
@@ -119,8 +129,9 @@
 .table-board__active-color--YELLOW { background: #eab308; }
 
 .table-board__direction {
-  font-size: 1.1rem;
+  font-size: 1.4rem;
   color: #d4d4d8;
+  align-self: center;
 }
 
 .table-board__penalty {
@@ -130,6 +141,7 @@
   border-radius: 999px;
   font-weight: 800;
   letter-spacing: 0.05em;
+  flex: 0 0 auto;
 }
 
 .table-board__turn-banner {
@@ -141,9 +153,41 @@
   border-radius: 12px;
   background: rgba(250, 204, 21, 0.2);
   color: #facc15;
+  flex: 0 0 auto;
 }
 
 .table-board__turn-banner--win {
   background: rgba(34, 197, 94, 0.2);
   color: #4ade80;
+}
+
+/* Brief visual pulse when a ROTATE_HANDS/SWAP_HAND card resolves — see
+   useHandShufflePulse in Table.tsx. Not a full animation system, just enough
+   feedback that hands visibly moved. */
+.table-board__player--pulse {
+  animation: table-board-pulse 0.9s ease-out;
+}
+
+@keyframes table-board-pulse {
+  0% {
+    box-shadow: 0 0 0 rgba(147, 197, 253, 0);
+    background: rgba(147, 197, 253, 0.45);
+  }
+  100% {
+    box-shadow: 0 0 20px rgba(147, 197, 253, 0);
+    background: rgba(0, 0, 0, 0.35);
+  }
+}
+
+.table-board__arena--pulse .table-board__center {
+  animation: table-board-center-pulse 0.9s ease-out;
+}
+
+@keyframes table-board-center-pulse {
+  0% {
+    transform: translate(-50%, -50%) scale(1.12);
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+  }
 }
