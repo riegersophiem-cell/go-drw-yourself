@@ -1,461 +1,493 @@
 .table-board {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 24px;
-  height: 100%;
-  box-sizing: border-box;
-  background: radial-gradient(circle at 50% 30%, #14532d, #052e16 70%);
-  color: white;
-}
-
-.table-board--compact {
-  gap: 6px;
-  padding: 12px;
-  min-height: 0;
-}
-
-.table-board--compact .table-board__arena {
-  min-height: 140px;
-}
-
-.table-board--compact .table-board__turn-banner {
-  font-size: 1.1rem;
-  padding: 6px 16px;
-}
-
-/* See the matching rule in PlayerGame.css — frees up height for the arena
-   on a short landscape viewport, where every fixed-size sibling competes
-   directly with the table for very little available room. */
-@media (max-height: 420px) {
-  .table-board--compact {
-    gap: 3px;
-    padding: 6px;
-  }
-
-  .table-board--compact .table-board__turn-banner {
-    font-size: 0.8rem;
-    padding: 3px 10px;
-  }
-
-  .table-board--compact .table-board__penalty {
-    padding: 4px 12px;
-    font-size: 0.85rem;
-  }
-}
-
-/* Badge padding/font-size for every compact combination (normal, crowded,
-   short-viewport, crowded+short) live together further down, right after
-   the base .table-board__player/.table-board__player-count rules — see the
-   "Compact badge sizing cascade" comment there for why they're grouped and
-   ordered the way they are. */
-
-/*
- * The arena is whatever space the surrounding flex layout hands it — on a
- * tall viewport with little competing content that can be far taller than a
- * table actually needs. `container-type: size` turns that actual rendered
- * size into container query units (cqw/cqh) for `__surface` to size itself
- * against, without any JS measurement or fixed breakpoints.
- *
- * The arena has no in-flow children (everything inside is
- * position: absolute/relative), so its natural minimum is already 0 — a
- * small explicit floor below (140px compact / 200px full-screen) is a
- * deliberate choice, not a leftover: below roughly that size there just
- * isn't room for 4 player badges around the rim without them overlapping
- * each other, which is worse than the alternative of `.player-game__board`
- * (overflow-y: auto already) needing a modest scroll to reach the rest of
- * the table on the shortest landscape viewports. This floor is far below
- * the old fixed 260px/200px, so it only ever engages in that extreme case —
- * everywhere else the arena already exceeds it from the flex space alone.
- */
-.table-board__arena {
+  --ink: #111827;
   position: relative;
-  flex: 1;
-  min-height: 200px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  container-type: size;
-  container-name: table-arena;
+  min-height: 0;
+  height: 100%;
+  padding: 8px 18px 0;
+  box-sizing: border-box;
+  color: var(--ink);
+  overflow: hidden;
+  background: radial-gradient(ellipse at 50% 40%, rgba(255,255,255,.94) 0 26%, rgba(226,236,248,.76) 58%, rgba(196,211,228,.9) 100%), #dbe5f0;
 }
-
-/*
- * Fits the largest square that fits inside the arena's actual (cqw, cqh)
- * container size — the standard container-query "contain" technique:
- * whichever of the two is the tighter constraint wins, and since both sides
- * use the same expression the result is always square. This keeps the
- * table itself reasonably proportioned instead of stretching into a tall,
- * mostly-empty oval on generous (typically portrait) viewports, while a
- * short landscape viewport still gets a table sized to exactly its
- * available height (never a squashed sliver) — the player ellipse
- * (seatStyle in Table.tsx, unchanged) is positioned in percentages *of this
- * box*, not of the raw arena.
- */
+.table-board:before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, rgba(255,255,255,.45), transparent 30%, rgba(85,130,180,.09));
+  pointer-events: none;
+}
 .table-board__surface {
   position: relative;
-  width: min(100cqw, 100cqh);
-  height: min(100cqw, 100cqh);
-  /* A second, nested container context sized to the surface's own final
-     box, so player badges can cap their width as a fraction of *this* box
-     (see .table-board__player below) — matching the same box their left/top
-     percentages already position them against. Querying the arena's cqw
-     here instead would mismatch whenever the surface is narrower than the
-     arena (any landscape-short case where height is the binding dimension). */
-  container-type: size;
-  container-name: table-surface;
+  width: min(100%, 1180px);
+  height: 100%;
+  min-height: inherit;
+  margin: auto;
+  isolation: isolate;
+}
+.table-board__rings,
+.table-board__rings:before,
+.table-board__rings:after {
+  position: absolute;
+  content: "";
+  border-radius: 50%;
+  pointer-events: none;
+}
+.table-board__rings {
+  inset: 8% 2% 3%;
+  border: 1px solid rgba(255,255,255,.95);
+  box-shadow: inset 0 0 42px rgba(84,122,164,.08), 0 24px 70px rgba(41,72,112,.12);
+}
+.table-board__rings:before {
+  inset: 10% 9%;
+  border: 1px solid rgba(111,143,180,.22);
+}
+.table-board__rings:after {
+  inset: 23% 20%;
+  border: 1px solid rgba(106,145,190,.18);
+  box-shadow: 0 0 50px rgba(66,133,255,.08);
 }
 
-/*
- * Crowded mode (>= CROWDED_PLAYER_THRESHOLD seats, see Table.tsx): the
- * ellipse's per-seat radius/width tuning has a floor — on a short landscape
- * surface there just isn't a `--badge-max-w`/rx combination that keeps 6-8
- * badges apart, since neighbors end up both angularly close *and* radially
- * capped to the same small circle. Two in-flow, wrapping rows sidestep the
- * geometry problem entirely: normal flexbox layout can't produce overlap.
- * The surface drops its own square aspect-ratio sizing here (that sizing
- * exists to fit an ellipse nicely; a flex column has no use for it) and
- * simply fills the arena, scrolling internally as a last resort if even two
- * wrapped rows plus the pile cluster don't fit the shortest viewports.
- */
-.table-board__surface--crowded {
-  width: 100%;
-  height: 100%;
+.table-board__player {
+  position: absolute;
+  z-index: 5;
+  transform: translate(-50%, -50%);
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  width: clamp(150px, 17vw, 220px);
+  min-height: 70px;
+  padding: 10px 14px;
+  box-sizing: border-box;
+  border: 1px solid rgba(255,255,255,.42);
+  border-radius: 28px;
+  color: #f8fafc;
+  text-align: left;
+  background: linear-gradient(135deg, rgba(27,43,66,.93), rgba(10,24,43,.82));
+  box-shadow: 0 14px 28px rgba(34,54,82,.2), inset 0 1px 0 rgba(255,255,255,.14);
+  backdrop-filter: blur(14px);
+}
+.table-board__player--own {
+  background: linear-gradient(135deg, rgba(248,250,252,.98), rgba(229,233,241,.94));
+  color: #111827;
+}
+.table-board__player--active {
+  border-color: #ffd250;
+  box-shadow: 0 0 0 2px rgba(255,210,80,.25), 0 0 28px rgba(255,190,35,.48), 0 14px 28px rgba(34,54,82,.24);
+}
+.table-board__avatar {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border: 2px solid rgba(255,255,255,.6);
+  border-radius: 50%;
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 900;
+  background: linear-gradient(145deg, #64748b, #0f172a);
+}
+.table-board__avatar--bot { font-size: 1.45rem; }
+.table-board__presence {
+  position: absolute;
+  right: -1px;
+  bottom: 1px;
+  width: 10px;
+  height: 10px;
+  border: 2px solid #e7edf5;
+  border-radius: 50%;
+  background: #3ee56e;
+}
+.table-board__presence--offline { background: #f87171; }
+.table-board__player-copy {
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  justify-content: space-evenly;
-  align-items: center;
-  gap: 4px;
-  overflow: auto;
+}
+.table-board__player-name {
+  overflow: hidden;
+  font-size: .95rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.table-board__player-count {
+  color: #b9c5d4;
+  font-size: .66rem;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.table-board__player--own .table-board__player-count { color: #64748b; }
+.table-board__turn-pill {
+  position: absolute;
+  left: 50%;
+  bottom: -13px;
+  transform: translateX(-50%);
+  padding: 5px 16px;
+  border: 1px solid #ffe58c;
+  border-radius: 999px;
+  color: #332000;
+  font-size: .62rem;
+  font-weight: 900;
+  letter-spacing: .07em;
+  white-space: nowrap;
+  background: linear-gradient(180deg, #ffe66f, #ffc936);
+  box-shadow: 0 5px 14px rgba(245,170,0,.35);
+}
+.table-board__skip-stamp {
+  position: absolute;
+  top: -7px;
+  right: 10px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  color: #fff;
+  font-size: .52rem;
+  font-weight: 900;
+  background: #e5484d;
 }
 
-.table-board__row {
+.table-board__center-stage {
+  position: absolute;
+  z-index: 3;
+  left: 50%;
+  top: 53%;
+  transform: translate(-50%, -50%);
+  width: min(62%, 700px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+.table-board__effect-chip {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  min-width: 300px;
+  padding: 9px 16px;
+  border: 1px solid rgba(119,129,255,.17);
+  border-radius: 999px;
+  text-align: left;
+  background: rgba(239,242,255,.88);
+  box-shadow: 0 8px 18px rgba(68,72,143,.15);
+}
+.table-board__effect-chip > span:first-child { font-size: 1.4rem; }
+.table-board__effect-chip span {
+  display: flex;
+  flex-direction: column;
+  color: #667085;
+  font-size: .64rem;
+}
+.table-board__effect-chip small {
+  color: #1f2937;
+  font-size: .72rem;
+  font-weight: 900;
+}
+.table-board__effect-chip strong { font-size: 1.5rem; }
+.table-board__center-grid {
+  display: grid;
+  grid-template-columns: 110px 150px 130px;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+}
+.table-board__pile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  text-transform: uppercase;
+}
+.table-board__pile > strong {
+  margin-top: 4px;
+  font-size: .65rem;
+  letter-spacing: .06em;
+}
+.table-board__pile > span:not(.table-board__active-color) {
+  min-width: 54px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  color: #fff;
+  font-size: .75rem;
+  font-weight: 800;
+  background: #66758a;
+}
+.table-board__card-stack { position: relative; }
+.table-board__card-stack:before,
+.table-board__card-stack:after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  background: #172437;
+  border: 1px solid #91a0b3;
+}
+.table-board__card-stack:before { transform: translate(4px, 7px); }
+.table-board__card-stack:after { transform: translate(2px, 3px); }
+.table-board__card-stack > * {
+  position: relative;
+  z-index: 2;
+}
+.table-board__card-stack--hero:before {
+  transform: translate(-8px, 7px) rotate(-4deg);
+  background: #6a1ae8;
+}
+.table-board__card-stack--hero:after {
+  transform: translate(7px, 4px) rotate(3deg);
+  background: #eebc2e;
+}
+.table-board__hero-halo {
+  position: absolute;
+  top: 38%;
+  left: 50%;
+  width: 175px;
+  height: 175px;
+  transform: translate(-50%, -50%);
+  border: 1px solid rgba(60,138,255,.65);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(71,144,255,.22), rgba(71,144,255,0) 66%);
+  box-shadow: 0 0 34px rgba(36,126,255,.33);
+}
+.table-board__active-color {
+  position: absolute;
+  right: 2px;
+  bottom: 24px;
+  z-index: 4;
+  min-width: 0 !important;
+  width: 14px;
+  height: 14px;
+  padding: 0 !important;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(0,0,0,.25);
+}
+.table-board__active-color--RED { background: #e5484d !important; }
+.table-board__active-color--BLUE { background: #3b82f6 !important; }
+.table-board__active-color--GREEN { background: #22c55e !important; }
+.table-board__active-color--YELLOW { background: #eab308 !important; }
+
+.table-board__direction {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-transform: uppercase;
+}
+.table-board__direction small {
+  color: #526174;
+  font-size: .58rem;
+  font-weight: 900;
+  letter-spacing: .06em;
+}
+.table-board__direction strong {
+  font-size: .6rem;
+  white-space: nowrap;
+}
+.table-board__direction-orb {
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  border: 3px solid #368bff;
+  border-radius: 50%;
+  color: #e8f2ff;
+  font-size: 2.4rem;
+  line-height: 1;
+  background: radial-gradient(circle at 36% 28%, #3c5573, #122239 68%);
+  box-shadow: 0 0 0 5px rgba(255,255,255,.88), 0 0 24px #247eff, inset 0 0 16px rgba(86,163,255,.45);
+}
+.table-board__status-rail {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  width: min(100%, 560px);
+  border: 1px solid rgba(148,163,184,.18);
+  border-radius: 22px;
+  background: rgba(238,244,251,.78);
+  box-shadow: 0 8px 22px rgba(52,76,108,.1);
+  overflow: hidden;
+}
+.table-board__status-rail > div {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 9px;
+  padding: 9px 14px;
+  text-align: left;
+}
+.table-board__status-rail > div + div { border-left: 1px solid rgba(100,116,139,.2); }
+.table-board__status-rail > div > span {
+  grid-row: 1 / 3;
+  align-self: center;
+  color: #2563eb;
+  font-size: 1.25rem;
+}
+.table-board__status-rail small {
+  color: #7a8798;
+  font-size: .56rem;
+}
+.table-board__status-rail strong {
+  overflow: hidden;
+  font-size: .72rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.table-board__crowded-seats {
+  position: absolute;
+  z-index: 5;
+  inset: 3% 2% auto;
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  align-items: center;
-  gap: 4px;
-  width: 100%;
-  flex: 0 0 auto;
+  gap: 7px;
 }
-
-/*
- * Doubled class (.table-board__player.table-board__player--crowded) so this
- * always outranks the base `.table-board__player` rule below regardless of
- * source order — both selectors otherwise have identical specificity, and
- * `position: static` here silently losing to the base rule's
- * `position: absolute` is exactly what made every crowded badge stack on
- * top of the exact same point instead of flowing into the row.
- */
 .table-board__player.table-board__player--crowded {
-  position: static;
-  transform: none;
-  max-width: 110px;
-  padding: 3px 8px;
-  font-size: 0.7rem;
-}
-
-/*
- * seatStyle (Table.tsx) keeps every seat well inside the surface edge and
- * sets `--badge-max-w` per seat — narrower as player count grows, since more
- * seats leave less angular room between neighbors before their badges would
- * touch. A *very* small surface (short landscape viewport, see the 420px
- * media queries above) can still make that cap narrower than even a short
- * display name needs. Wrapping would grow the badge *taller* instead, which
- * is worse: seatStyle's radius assumes a roughly fixed badge height, and a
- * badge that grows several lines tall overflows vertically regardless of how
- * safely it's inset horizontally. Truncating with an ellipsis instead keeps
- * every badge's height fixed and predictable no matter how narrow the cap
- * gets; the full name is still available as a native tooltip via the
- * `title` attribute Table.tsx sets on the badge (renderPlayerBadge) — the
- * visible text itself is never shortened in the DOM, only clipped visually.
- */
-.table-board__player {
-  position: absolute;
-  transform: translate(-50%, -50%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 8px 16px;
-  border-radius: 10px;
-  background: rgba(0, 0, 0, 0.35);
-  max-width: var(--badge-max-w, 34cqw);
-  transition: outline 0.15s ease, background 0.15s ease;
-}
-
-.table-board__player-name,
-.table-board__player-count {
-  max-width: 100%;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
-.table-board__player--own {
-  outline: 2px solid #a1a1aa;
-}
-
-.table-board__player--active {
-  outline: 2px solid #facc15;
-  background: rgba(250, 204, 21, 0.2);
-  box-shadow: 0 0 16px rgba(250, 204, 21, 0.4);
-}
-
-.table-board__player-name {
-  font-weight: 700;
-}
-
-.table-board__player-count {
-  font-size: 0.85rem;
-  color: #d4d4d8;
-}
-
-/*
- * Compact badge sizing cascade — four states, deliberately ordered/specified
- * so the intended one always wins instead of the equal-specificity,
- * last-in-source-wins trap that previously let the plain compact rule
- * silently clobber both the crowded and the short-viewport overrides:
- *
- *   1. compact, normal height, not crowded       — base rule below.
- *   2. compact, short viewport (<=420px), not
- *      crowded                                    — same specificity as #1
- *                                                    (two classes each);
- *                                                    placed after #1 so it
- *                                                    wins whenever the media
- *                                                    query matches.
- *   3. compact + crowded, any height              — doubled crowded class
- *                                                    (three classes) is
- *                                                    strictly more specific
- *                                                    than #1/#2, so it wins
- *                                                    regardless of source
- *                                                    order or viewport.
- *   4. compact + crowded + short viewport          — same doubled-class
- *      (tightest state)                             specificity as #3;
- *                                                    placed after #3 so it
- *                                                    wins when both the
- *                                                    class and the media
- *                                                    query match, and its
- *                                                    higher specificity than
- *                                                    #2 means it always beats
- *                                                    that regardless of order.
- *
- * .table-board__player-count follows the identical four-state structure so
- * its own font-size can't be re-clobbered by whichever state's badge rule
- * happens to run last either.
- */
-.table-board--compact .table-board__player {
-  padding: 4px 10px;
-  font-size: 0.85rem;
-}
-
-.table-board--compact .table-board__player-count {
-  font-size: 0.75rem;
-}
-
-@media (max-height: 420px) {
-  .table-board--compact .table-board__player {
-    padding: 2px 8px;
-    font-size: 0.7rem;
-  }
-
-  .table-board--compact .table-board__player-count {
-    font-size: 0.62rem;
-  }
-}
-
-.table-board--compact .table-board__player.table-board__player--crowded {
-  padding: 2px 6px;
-  font-size: 0.65rem;
-}
-
-@media (max-height: 420px) {
-  .table-board--compact .table-board__player.table-board__player--crowded {
-    padding: 2px 5px;
-    font-size: 0.6rem;
-  }
-}
-
-.table-board__skip-stamp {
-  font-size: 0.65rem;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  color: #f87171;
-  border: 1px solid #f87171;
-  border-radius: 999px;
-  padding: 1px 8px;
-  margin-top: 2px;
-}
-
-/*
- * The pile cluster (draw + discard + direction arrow) has a roughly fixed
- * natural width regardless of surface size. On a narrow surface that width
- * can approach — or, combined with a safely-inset seat radius, collide with
- * — the side seats. Scaling it down (never up, `min(1, …)`) once it gets
- * disproportionate to the surface's own width keeps it clear of the seats
- * without touching seatStyle's geometry or the shared .uno-card sizing.
- *
- * `--responsive-scale` and `--pulse-scale` are multiplied together in one
- * `scale()` rather than each owning the whole `transform` — the rotate/swap
- * pulse (table-board-center-pulse below) only ever animates `--pulse-scale`,
- * so it can never clobber the responsive shrink the way replacing the whole
- * `transform` with a hardcoded `scale(1.12)` used to. The pulse's *visual*
- * size therefore stays proportional to whatever the responsive scale already
- * is — on a small surface a 12%-bigger-than-already-small cluster still
- * can't newly reach the seats.
- */
-.table-board__center {
-  --responsive-scale: min(1, calc(48cqw / 230px));
-  --pulse-scale: 1;
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%) scale(calc(var(--responsive-scale) * var(--pulse-scale)));
-  transform-origin: center;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 28px;
-}
-
-/* Crowded mode lays the cluster out in normal flex flow between the two
-   player rows instead of centering it absolutely over the whole surface. */
-.table-board__surface--crowded .table-board__center {
-  position: static;
-  transform: scale(calc(var(--responsive-scale) * var(--pulse-scale)));
-}
-
-.table-board__pile {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
   position: relative;
+  left: auto !important;
+  top: auto !important;
+  transform: none;
+  width: min(145px, 23%);
+  min-height: 54px;
+  grid-template-columns: 34px minmax(0, 1fr);
+  padding: 6px 9px;
+  border-radius: 20px;
+}
+.table-board__player--crowded .table-board__avatar {
+  width: 32px;
+  height: 32px;
+  font-size: .8rem;
+}
+.table-board__player--crowded .table-board__player-name { font-size: .72rem; }
+.table-board__player--crowded .table-board__player-count { font-size: .52rem; }
+.table-board__player--pulse { animation: player-pulse .9s ease-out; }
+.table-board__center-stage--pulse { animation: center-pulse .9s ease-out; }
+@keyframes player-pulse {
+  0% { filter: brightness(1.45); }
+  100% { filter: none; }
+}
+@keyframes center-pulse {
+  0% { filter: brightness(1.35); }
+  100% { filter: none; }
 }
 
-.table-board__pile-label {
-  font-size: 0.7rem;
-  color: #d4d4d8;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.table-board__pile-count {
-  font-size: 0.8rem;
-  color: #d4d4d8;
-}
-
-.table-board__active-color {
-  position: absolute;
-  bottom: -12px;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  border: 2px solid white;
-}
-.table-board__active-color--RED { background: #e5484d; }
-.table-board__active-color--BLUE { background: #3b82f6; }
-.table-board__active-color--GREEN { background: #22c55e; }
-.table-board__active-color--YELLOW { background: #eab308; }
-
-.table-board__direction {
-  font-size: 1.4rem;
-  color: #d4d4d8;
-  align-self: center;
-}
-
-.table-board__penalty {
-  align-self: center;
-  background: #e5484d;
-  padding: 8px 20px;
-  border-radius: 999px;
-  font-weight: 800;
-  letter-spacing: 0.05em;
-  flex: 0 0 auto;
-}
-
-.table-board__turn-banner {
-  align-self: center;
-  font-size: 1.6rem;
-  font-weight: 900;
-  letter-spacing: 0.08em;
-  padding: 8px 24px;
-  border-radius: 12px;
-  background: rgba(250, 204, 21, 0.2);
-  color: #facc15;
-  flex: 0 0 auto;
-}
-
-.table-board__turn-banner--win {
-  background: rgba(34, 197, 94, 0.2);
-  color: #4ade80;
-}
-
-/* Brief visual pulse when a ROTATE_HANDS/SWAP_HAND card resolves — see
-   useHandShufflePulse in Table.tsx. Not a full animation system, just enough
-   feedback that hands visibly moved. */
-.table-board__player--pulse {
-  animation: table-board-pulse 0.9s ease-out;
-}
-
-@keyframes table-board-pulse {
-  0% {
-    box-shadow: 0 0 0 rgba(147, 197, 253, 0);
-    background: rgba(147, 197, 253, 0.45);
+@media (max-width: 760px) {
+  .table-board { padding-inline: 4px; }
+  .table-board__rings { inset: 11% -18% 1%; }
+  .table-board__player {
+    width: 126px;
+    min-height: 52px;
+    grid-template-columns: 34px minmax(0, 1fr);
+    gap: 6px;
+    padding: 6px 8px;
+    border-radius: 20px;
   }
-  100% {
-    box-shadow: 0 0 20px rgba(147, 197, 253, 0);
-    background: rgba(0, 0, 0, 0.35);
+  .table-board__avatar {
+    width: 32px;
+    height: 32px;
+    font-size: .72rem;
   }
-}
-
-/*
- * Registering --pulse-scale as an animatable <number> is what lets this
- * keyframe animate *only* the pulse factor — without @property, an
- * unregistered custom property can't be smoothly interpolated by a CSS
- * animation at all (it would just jump straight to the end value).
- * `.table-board__center`'s own `transform` (see above) multiplies this
- * together with --responsive-scale, so the pulse rides on top of whatever
- * the current responsive size already is instead of replacing it.
- */
-@property --pulse-scale {
-  syntax: "<number>";
-  inherits: false;
-  initial-value: 1;
-}
-
-.table-board__surface--pulse .table-board__center {
-  animation: table-board-center-pulse 0.9s ease-out;
-}
-
-@keyframes table-board-center-pulse {
-  0% {
-    --pulse-scale: 1.12;
+  .table-board__avatar--bot { font-size: 1rem; }
+  .table-board__player-name { font-size: .72rem; }
+  .table-board__player-count { font-size: .5rem; }
+  .table-board__turn-pill {
+    bottom: -10px;
+    padding: 3px 9px;
+    font-size: .48rem;
   }
-  100% {
-    --pulse-scale: 1;
+  .table-board__center-stage {
+    top: 55%;
+    width: 94%;
+    gap: 10px;
   }
+  .table-board__effect-chip {
+    min-width: 235px;
+    padding: 6px 12px;
+  }
+  .table-board__center-grid {
+    grid-template-columns: 56px 108px 40px;
+    gap: 8px;
+  }
+  .table-board__direction-orb {
+    width: 40px;
+    height: 40px;
+    font-size: 1.4rem;
+  }
+  .table-board__hero-halo {
+    width: 110px;
+    height: 110px;
+  }
+  .table-board__status-rail { width: min(96%, 390px); }
+  .table-board__status-rail > div {
+    column-gap: 5px;
+    padding: 6px 7px;
+  }
+  .table-board__status-rail > div > span { font-size: .9rem; }
+  .table-board__status-rail strong { font-size: .58rem; }
+
+  /* Pile/direction captions ("ZIEHSTAPEL", "SPIELRICHTUNG", ...) are long
+     words that would otherwise overflow their now-narrower mobile columns
+     wide enough to visually reach the side player panels next to them —
+     shrinking them here keeps that overflow inside the existing gaps. */
+  .table-board__pile > strong {
+    font-size: .42rem;
+    letter-spacing: .02em;
+  }
+  .table-board__direction small {
+    font-size: .42rem;
+    letter-spacing: .02em;
+  }
+  .table-board__direction strong { font-size: .5rem; }
+
+  /* Non-own seats (side players framing the hero row, count 3-6) run
+     narrower than the always-full-size own-player card at this width —
+     see seatStyle()'s narrow branch in Table.tsx, tuned together with
+     these sizes so the side seats clear the shrunk center-grid above,
+     the hero pile's halo, and the status rail below at 375px width. */
+  .table-board__player--side {
+    width: 104px;
+    min-height: 44px;
+    padding: 4px 7px;
+  }
+  .table-board__player--side .table-board__avatar {
+    width: 26px;
+    height: 26px;
+  }
+
+  /* The default (inherited) line-height nearly doubles the two-line "BOT · 7
+     / KARTEN" caption's height, pushing the whole card well past its
+     min-height and into the draw pile below it — tightening it here is what
+     actually keeps these cards inside the gap above the center-grid. */
+  .table-board__player--side .table-board__player-name { line-height: 1.2; }
+  .table-board__player--side .table-board__player-count { line-height: 1.15; }
+
+  /* Same fix for the 7+ player "crowded" flex-wrap cards: at this width they
+     wrap to a narrow ~28px text column, and the inherited line-height turned
+     "BOT · 7 / KARTEN" into a 3-4 line, ~70px-tall block — tall enough that
+     a second row of cards reached down into the center-grid below. */
+  .table-board__player--crowded .table-board__player-name { line-height: 1.15; }
+  .table-board__player--crowded .table-board__player-count { line-height: 1.1; }
 }
 
-/*
- * Crowded mode has essentially no vertical slack for a *scaling* pulse: the
- * cluster's resting height already fills the gap between the two player
- * rows (measured on 812×375/8 players: cluster 128px tall, gap 128px —
- * zero margin), so even the modest 1.12× bump above visibly overlapped both
- * rows at its peak. This selector is more specific than the plain
- * `.table-board__surface--pulse` rule above (two classes vs. one), so it
- * replaces the whole `animation` for crowded surfaces with a brightness
- * flash instead — geometry-free, so it can never touch a badge — while
- * every non-crowded (ellipse) surface keeps the original scaling pulse
- * untouched.
- */
-.table-board__surface--crowded.table-board__surface--pulse .table-board__center {
-  animation: table-board-center-pulse-flash 0.9s ease-out;
+@media (max-height: 700px) {
+  .table-board__center-stage {
+    top: 60%;
+    transform: translate(-50%, -50%) scale(.72);
+  }
+  .table-board__player { transform: translate(-50%, -50%) scale(.72); }
+  .table-board__rings { inset: 5% 0 1%; }
 }
 
-@keyframes table-board-center-pulse-flash {
-  0% {
-    filter: brightness(1.7);
-  }
-  100% {
-    filter: brightness(1);
+@keyframes direction-orb-arrive {
+  0% { rotate: -65deg; scale: .72; opacity: .25; }
+  70% { rotate: 8deg; scale: 1.08; }
+  100% { rotate: 0; scale: 1; opacity: 1; }
+}
+.table-board__direction-orb { animation: direction-orb-arrive .6s cubic-bezier(.2,.8,.2,1); }
+
+@media (prefers-reduced-motion: reduce) {
+  .table-board__player--pulse,
+  .table-board__center-stage--pulse,
+  .table-board__direction-orb {
+    animation: none;
   }
 }

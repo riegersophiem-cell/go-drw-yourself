@@ -46,6 +46,7 @@ function fanStyle(index: number, count: number): CSSProperties {
     transform: `rotate(${rotate}deg) translateY(${rise}px)`,
     transformOrigin: "50% 120%",
     zIndex: index,
+    ["--hand-index" as string]: index,
   };
 }
 

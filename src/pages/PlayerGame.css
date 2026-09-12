@@ -1,117 +1,279 @@
 .player-game {
-  display: flex;
-  flex-direction: column;
   height: 100dvh;
-  background: linear-gradient(180deg, #09090b, #18181b);
-  color: white;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) clamp(250px, 34vh, 360px);
   overflow: hidden;
+  color: #111827;
+  background: #dce6f1;
 }
-
 .player-game__topbar {
-  display: flex;
-  justify-content: space-between;
-  padding: 8px 16px;
-  font-size: 0.85rem;
-  color: #a1a1aa;
-  flex: 0 0 auto;
-}
-
-.player-game__board {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-y: auto;
-}
-
-.player-game__status {
-  text-align: center;
-  font-weight: 700;
-  padding: 6px;
-  color: #facc15;
-}
-
-.player-game__penalty {
-  align-self: center;
-  background: #e5484d;
-  padding: 6px 18px;
-  border-radius: 999px;
-  font-weight: 800;
-  margin: 0 auto;
-}
-
-.player-game__draw {
-  align-self: center;
-  margin-bottom: 12px;
-}
-
-/*
- * On a short landscape viewport (a phone rotated sideways) the hand alone
- * (fixed geometry, see PlayerHand.css/Paket 2A — not touched here) already
- * takes a large share of the available height, leaving very little for the
- * table above it. Trimming the topbar and draw button down to their
- * essentials on that one layout (never touching their normal size) hands
- * that space back to `.table-board__arena` instead, which is what actually
- * needs it — see the matching Table.css rule for the same breakpoint.
- */
-@media (max-height: 420px) {
-  .player-game__topbar {
-    padding: 2px 12px;
-    font-size: 0.7rem;
-  }
-
-  button.player-game__draw {
-    padding: 4px 14px;
-    font-size: 0.8rem;
-    margin-bottom: 4px;
-  }
-}
-
-.player-game__hand-wrap {
-  transition: opacity 0.15s ease, filter 0.15s ease;
-}
-
-/*
- * Every card here is already individually disabled (see .uno-card--disabled
- * in Card.css) during a TARGET/SWAP/color-choice phase, so this must only
- * add a light "the whole hand is inactive" cue — stacking another strong
- * opacity/grayscale/blur on top of the per-card dimming compounds (opacity
- * multiplies) into an unreadably faint, blurred hand.
- */
-.player-game__hand-wrap--receded {
-  opacity: 0.85;
+  position: absolute;
+  z-index: 20;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  align-items: start;
+  gap: 24px;
+  padding: 18px 26px;
   pointer-events: none;
 }
-
-.color-picker {
-  text-align: center;
-  padding: 16px 12px;
-  background: rgba(250, 204, 21, 0.08);
-  border-top: 1px solid rgba(250, 204, 21, 0.35);
-  border-bottom: 1px solid rgba(250, 204, 21, 0.35);
-}
-
-.color-picker p {
-  margin: 0 0 12px;
-  font-weight: 700;
-  color: #facc15;
-}
-
-.color-picker__options {
+.player-game__brand {
   display: flex;
-  gap: 16px;
-  justify-content: center;
+  align-items: flex-start;
+  gap: 18px;
+  text-align: left;
 }
-
-.color-picker__swatch {
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  border: 3px solid white;
-  cursor: pointer;
+.player-game__brand strong {
+  font-size: 1.25rem;
+  line-height: .88;
+  letter-spacing: -.05em;
 }
-
-.swap-picker__options {
+.player-game__brand span {
+  width: 145px;
+  color: #536274;
+  font-size: .62rem;
+  line-height: 1.25;
+}
+.player-game__room {
+  justify-self: start;
   display: flex;
   flex-direction: column;
+  padding: 8px 18px;
+  border: 1px solid rgba(120,145,175,.18);
+  border-radius: 14px;
+  text-align: left;
+  background: rgba(225,235,247,.72);
+  box-shadow: inset 0 1px rgba(255,255,255,.7);
+}
+.player-game__room span {
+  color: #64748b;
+  font-size: .56rem;
+}
+.player-game__room strong {
+  font-size: .9rem;
+  letter-spacing: .08em;
+}
+.player-game__meta {
+  justify-self: end;
+  display: flex;
   gap: 8px;
   align-items: center;
+  padding: 10px 16px;
+  border-radius: 16px;
+  color: #26364b;
+  background: rgba(211,224,239,.82);
+}
+.player-game__board {
+  grid-row: 1 / 3;
+  min-height: 0;
+}
+.player-game__board > .table-board { padding-top: 54px; }
+
+.player-game__dock {
+  position: relative;
+  z-index: 10;
+  grid-row: 3;
+  display: grid;
+  grid-template-columns: 160px minmax(0, 1fr) 190px;
+  align-items: center;
+  min-height: 0;
+  padding: 24px 26px 6px;
+  border: 1px solid rgba(154,188,226,.7);
+  border-bottom: 0;
+  border-radius: 54px 54px 0 0;
+  color: #f8fafc;
+  background: radial-gradient(ellipse at 50% 0, rgba(50,76,107,.4), transparent 52%), linear-gradient(160deg, #17283d, #071321 64%, #0b1929);
+  box-shadow: 0 -16px 46px rgba(41,72,111,.35), inset 0 1px 0 rgba(255,255,255,.2);
+  isolation: isolate;
+}
+.player-game__dock:after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  left: 8%;
+  right: 8%;
+  bottom: -42%;
+  height: 70%;
+  border: 2px solid rgba(134,168,204,.15);
+  border-radius: 50%;
+}
+.player-game__dock-glow {
+  position: absolute;
+  z-index: -1;
+  top: -5px;
+  left: 12%;
+  right: 12%;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(88,156,255,.28);
+  filter: blur(8px);
+}
+.player-game__sort,
+.player-game__draw,
+.player-game__play,
+.player-game__retry button,
+.player-game__targets button {
+  border: 1px solid rgba(151,177,207,.5);
+  border-radius: 999px;
+  color: #eaf1fa;
+  font: inherit;
+  font-size: .72rem;
+  font-weight: 750;
+  background: linear-gradient(180deg, #20344c, #122237);
+  box-shadow: inset 0 1px rgba(255,255,255,.12), 0 8px 18px rgba(0,0,0,.18);
+  cursor: pointer;
+}
+.player-game__sort {
+  justify-self: start;
+  padding: 13px 20px;
+}
+.player-game__sort span {
+  margin-right: 8px;
+  font-size: 1rem;
+}
+.player-game__sort--active {
+  border-color: #58a1ff;
+  color: #8cc1ff;
+}
+.player-game__hand-wrap {
+  min-width: 0;
+  align-self: end;
+  transition: opacity .18s, filter .18s;
+}
+.player-game__hand-wrap--receded {
+  opacity: .38;
+  filter: blur(1px);
+  pointer-events: none;
+}
+.player-game__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.player-game__play,
+.player-game__draw {
+  min-height: 54px;
+  padding: 10px 18px;
+}
+.player-game__play {
+  border-color: #ffe178;
+  color: #312200;
+  background: linear-gradient(180deg, #ffe56a, #ffc638);
+  box-shadow: 0 0 24px rgba(255,193,42,.42), inset 0 1px rgba(255,255,255,.72);
+}
+.player-game__actions span { margin-right: 9px; }
+.player-game button:disabled {
+  opacity: .42;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.player-game__retry,
+.player-game__choice,
+.player-game__instruction {
+  position: absolute;
+  z-index: 30;
+  left: 50%;
+  top: 18px;
+  transform: translateX(-50%);
+  padding: 10px 16px;
+  border: 1px solid rgba(255,255,255,.18);
+  border-radius: 18px;
+  text-align: center;
+  color: #fff;
+  background: rgba(12,25,42,.96);
+  box-shadow: 0 10px 30px rgba(0,0,0,.34);
+}
+.player-game__retry {
+  top: -58px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.player-game__retry p { font-size: .7rem; }
+.player-game__retry button { padding: 6px 10px; }
+.player-game__choice strong {
+  display: block;
+  margin-bottom: 8px;
+  font-size: .72rem;
+}
+.player-game__choice > div {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+.player-game__choice > div:not(.player-game__targets) button {
+  width: 36px;
+  height: 36px;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 3px 10px rgba(0,0,0,.35);
+  cursor: pointer;
+}
+.player-game__targets button { padding: 7px 12px; }
+.player-game__instruction {
+  top: 12px;
+  color: #ffe16a;
+  font-size: .72rem;
+  font-weight: 800;
+}
+
+@media (max-width: 760px) {
+  .player-game { grid-template-rows: auto minmax(0, 1fr) clamp(245px, 36vh, 320px); }
+  .player-game__topbar {
+    padding: 10px 12px;
+    grid-template-columns: 1fr auto;
+  }
+  .player-game__brand span,
+  .player-game__meta {
+    display: none;
+  }
+  .player-game__brand strong { font-size: .86rem; }
+  .player-game__room {
+    justify-self: end;
+    padding: 5px 10px;
+  }
+  .player-game__dock {
+    grid-template-columns: 80px minmax(0, 1fr) 90px;
+    padding: 20px 8px 2px;
+    border-radius: 34px 34px 0 0;
+  }
+  .player-game__sort {
+    padding: 9px;
+    font-size: .58rem;
+  }
+  .player-game__sort span {
+    display: block;
+    margin: 0;
+  }
+  .player-game__actions { gap: 8px; }
+  .player-game__play,
+  .player-game__draw {
+    min-height: 44px;
+    padding: 7px 5px;
+    font-size: .58rem;
+  }
+  .player-game__actions span {
+    display: block;
+    margin: 0;
+  }
+  .player-game__board > .table-board { padding-top: 42px; }
+  .player-game__choice {
+    top: 8px;
+    max-width: 80%;
+  }
+  .player-game__targets { flex-wrap: wrap; }
+}
+
+@media (max-height: 700px) {
+  .player-game { grid-template-rows: auto minmax(0, 1fr) 230px; }
+  .player-game__dock { padding-top: 14px; }
+  .player-game__topbar { padding-top: 7px; }
+  .player-game__brand span { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .player-game__hand-wrap { transition: none; }
 }

@@ -26,6 +26,23 @@
   width: 50px;
 }
 
+.uno-card--table { width: 78px; }
+
+.uno-card--hero {
+  width: 160px;
+  border-radius: 16px;
+  box-shadow: 0 14px 30px rgba(26, 59, 104, 0.32), 0 0 0 2px rgba(255, 255, 255, 0.72);
+}
+
+@media (max-width: 760px) {
+  /* Kept at the same ~1.9x ratio as desktop (Table.css's mobile
+     center-grid columns match these widths) — both shrink together so the
+     hero pile stays the clear visual center without the row growing wide
+     enough to collide with the side player panels at 375px. */
+  .uno-card--table { width: 56px; }
+  .uno-card--hero { width: 108px; }
+}
+
 .uno-card__art {
   display: block;
   width: 100%;

@@ -7,7 +7,7 @@ export interface CardProps {
   playable?: boolean;
   selected?: boolean;
   faceDown?: boolean;
-  size?: "small" | "normal";
+  size?: "small" | "normal" | "table" | "hero";
   onClick?: () => void;
 }
 
