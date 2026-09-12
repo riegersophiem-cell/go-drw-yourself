@@ -85,6 +85,7 @@ export function createNewGame(
 
   return {
     roomId,
+    gameId: crypto.randomUUID(),
     version: 1,
     turnNumber: 1,
     direction: 1,
@@ -148,6 +149,7 @@ export function toPublicPlayerView(state: GameState, player: Player): PublicPlay
 export function toPublicGameState(state: GameState, status: PublicGameState["status"] = "PLAYING"): PublicGameState {
   return {
     roomId: state.roomId,
+    gameId: state.gameId,
     version: state.version,
     status,
     direction: state.direction,

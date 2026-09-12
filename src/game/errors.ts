@@ -33,3 +33,15 @@ export class GameError extends Error {
     this.name = "GameError";
   }
 }
+
+/**
+ * Looks up the German message for a known `GameErrorCode` string. Used by
+ * the client's central Edge Function error handling (see
+ * `src/multiplayer/api.ts`) to translate a server-supplied `error.code`
+ * without duplicating this text elsewhere. Returns `undefined` for codes
+ * that aren't rule-engine errors (e.g. `NOT_HOST`, `NOT_ENOUGH_PLAYERS`) —
+ * those already carry their own German `message` from the server directly.
+ */
+export function lookupGameErrorMessage(code: string): string | undefined {
+  return (MESSAGES as Record<string, string>)[code];
+}

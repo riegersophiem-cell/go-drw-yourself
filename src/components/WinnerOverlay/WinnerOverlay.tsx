@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { usePendingAction } from "../../hooks/usePendingAction";
 import { useNavigate } from "react-router-dom";
 import { nextRound } from "../../multiplayer/api";
 import { clearSession, type DeviceSession } from "../../multiplayer/session";
@@ -10,6 +11,8 @@ export interface WinnerOverlayProps {
   session: DeviceSession;
   winnerName: string;
   players: RoomPlayerRow[];
+  gameId: string | null;
+  version: number;
 }
 
 /**
@@ -18,11 +21,12 @@ export interface WinnerOverlayProps {
  * (session cleared), NÄCHSTE RUNDE reuses the same room/lobby/match score
  * and only deals a fresh round.
  */
-export function WinnerOverlay({ session, winnerName, players }: WinnerOverlayProps) {
+export function WinnerOverlay({ session, winnerName, players, gameId, version }: WinnerOverlayProps) {
   const navigate = useNavigate();
   const [isHost, setIsHost] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const pendingRound = usePendingAction<{ type: "NEXT_ROUND"; expectedGameId: string | null; expectedVersion: number }>();
 
   useEffect(() => {
     supabase
@@ -43,11 +47,20 @@ export function WinnerOverlay({ session, winnerName, players }: WinnerOverlayPro
     navigate("/");
   }
 
-  async function handleNextRound() {
+  async function handleNextRound(retry = false) {
+    const action = retry && pendingRound.pending
+      ? pendingRound.pending.action
+      : { type: "NEXT_ROUND" as const, expectedGameId: gameId, expectedVersion: version };
+    const pending = pendingRound.begin(action, retry);
     setBusy(true);
     setError(null);
     try {
-      await nextRound(session.deviceId, session.sessionToken);
+      await nextRound(session.deviceId, session.sessionToken, {
+        actionId: pending.actionId,
+        expectedGameId: pending.action.expectedGameId,
+        expectedVersion: pending.action.expectedVersion,
+      });
+      pendingRound.complete(pending.actionId);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -80,14 +93,24 @@ export function WinnerOverlay({ session, winnerName, players }: WinnerOverlayPro
         </ul>
       </div>
 
-      {error && <p className="error-text">{error}</p>}
+      {error && (
+        <div>
+          <p className="error-text">{error}</p>
+          {pendingRound.pending && (
+            <>
+              <button className="btn btn--secondary" onClick={() => void handleNextRound(true)} disabled={busy}>Erneut versuchen</button>
+              <button className="btn btn--secondary" onClick={() => { pendingRound.cancel(); setError(null); }} disabled={busy}>Abbrechen</button>
+            </>
+          )}
+        </div>
+      )}
 
       <div className="winner-overlay__actions">
         <button className="btn btn--secondary" onClick={handleLeave}>
           Spiel verlassen
         </button>
         {isHost ? (
-          <button className="btn btn--primary" onClick={handleNextRound} disabled={busy}>
+          <button className="btn btn--primary" onClick={() => void handleNextRound()} disabled={busy}>
             Nächste Runde
           </button>
         ) : (

@@ -1,30 +1,37 @@
+/*
+ * The card face is a complete, final piece of artwork (see cardArt.ts) —
+ * this file only handles size, layout, and interaction affordances
+ * (playable/selected/disabled), never color or iconography, both of which
+ * are baked into the SVGs themselves.
+ */
 .uno-card {
-  --card-color: #18181b;
+  --card-aspect: 5 / 7; /* matches the 750x1050 artwork exactly */
   position: relative;
+  aspect-ratio: var(--card-aspect);
   border-radius: 12px;
-  border: 3px solid rgba(255, 255, 255, 0.85);
-  background: linear-gradient(160deg, var(--card-color), color-mix(in srgb, var(--card-color) 70%, black));
-  color: white;
-  font-weight: 800;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  border: none;
+  background: transparent;
+  padding: 0;
   cursor: pointer;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
   transition: transform 0.12s ease, box-shadow 0.12s ease;
-  padding: 0;
+  overflow: hidden;
 }
 
 .uno-card--normal {
-  width: 72px;
-  height: 104px;
-  font-size: 1.6rem;
+  width: 74px;
 }
 
 .uno-card--small {
-  width: 48px;
-  height: 70px;
-  font-size: 1.05rem;
+  width: 50px;
+}
+
+.uno-card__art {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
 }
 
 .uno-card--playable:hover {
@@ -37,48 +44,43 @@
   outline: 3px solid #fff;
 }
 
+/*
+ * Opacity (blending toward the dark table backdrop) recedes every card
+ * color by the same relative amount, unlike brightness()/grayscale() alone
+ * which push light colors (yellow/green) and dark ones (blue/red) toward
+ * different end results and can crush a dark card's icon contrast. The
+ * small saturate() keeps color identity (still needed to read the card)
+ * while visibly flattening it relative to a playable card. No transform or
+ * shadow lift on hover/active, so a disabled card never suggests it can be
+ * picked up like a playable one.
+ */
 .uno-card--disabled {
-  filter: grayscale(0.6) brightness(0.6);
+  opacity: 0.55;
+  filter: saturate(0.65);
+  box-shadow: none;
   cursor: not-allowed;
 }
 
-.uno-card__icon {
-  width: 62%;
-  height: 62%;
-  display: flex;
-  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.5));
-}
-
-.uno-card__icon svg {
-  width: 100%;
-  height: 100%;
-  color: white;
-  overflow: visible;
+/*
+ * :not(.uno-card--selected) is required here: a just-played card that still
+ * needs a target/color choice is both --selected and --disabled at once
+ * (see PlayerGame.tsx), and without this exclusion these rules' higher
+ * specificity would zero out .uno-card--selected's lift/outline on
+ * hover/active, making the selected card visually snap back down.
+ */
+.uno-card--disabled:not(.uno-card--selected):hover,
+.uno-card--disabled:not(.uno-card--selected):active {
+  transform: none;
+  box-shadow: none;
 }
 
 .uno-card--back {
-  background: repeating-linear-gradient(45deg, #27272a, #27272a 6px, #3f3f46 6px, #3f3f46 12px);
-  border: 3px solid rgba(255, 255, 255, 0.5);
   border-radius: 12px;
 }
 
-/* Action cards (anything with a rule effect) get a dezent holographic look
-   so they read as distinct from plain symbol cards at a glance — without
-   drowning out the symbol/color/meaning, which must stay legible (brief §5). */
-.uno-card--action {
-  border-image: linear-gradient(120deg, #f0abfc, #93c5fd, #fde68a, #86efac, #f0abfc) 1;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35), 0 0 14px rgba(255, 255, 255, 0.25);
-  background-blend-mode: overlay;
-  animation: uno-card-shimmer 5s ease-in-out infinite;
-  background-size: 220% 220%;
-}
-
-@keyframes uno-card-shimmer {
-  0%,
-  100% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
+/* The discard pile's empty-slot placeholder (no card played yet) — an
+   outline only, since there is no artwork to show for "nothing here". */
+.uno-card:not(.uno-card--back):empty {
+  border: 2px dashed rgba(255, 255, 255, 0.3);
+  box-shadow: none;
 }

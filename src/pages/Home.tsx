@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { createRoom } from "../multiplayer/api";
 import { saveSession } from "../multiplayer/session";
+import type { RoomNavState } from "./RoomPage";
 
 export function Home() {
   const [name, setName] = useState("");
@@ -26,7 +27,10 @@ export function Home() {
         role: "PLAYER",
         playerId: result.playerId,
       });
-      navigate(`/room/${result.roomId}`);
+      // create-room always inserts the room with status LOBBY and makes the
+      // creating device its host — both guaranteed by the server, not guessed.
+      const navState: RoomNavState = { roomId: result.roomId, deviceId: result.deviceId, confirmedStatus: "LOBBY", isHost: true };
+      navigate(`/room/${result.roomId}`, { state: navState });
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {

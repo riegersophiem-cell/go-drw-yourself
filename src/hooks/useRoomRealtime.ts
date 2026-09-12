@@ -2,6 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import { fetchPlayers, fetchPrivateState, fetchPublicState } from "../multiplayer/api";
 import { supabase } from "../supabase/client";
 import type { PrivatePlayerState, PublicGameState } from "../game/types";
+import type { GameEventBatch } from "../game/gameEvents";
+import { decideBatchAcceptance, validateBatchShape, type KnownRoundState } from "../multiplayer/batchReconciliation";
+import { useEventPresentation } from "./useEventPresentation";
 
 export interface RoomPlayerRow {
   player_id: string;
@@ -14,10 +17,15 @@ export interface RoomPlayerRow {
 }
 
 /**
- * Subscribes to the room's public broadcast channel. On every "state
- * changed" signal (which carries no secret data, only a version bump) it
- * refetches the public view for everyone, and — only if a deviceId/token was
- * given — the caller's own private view via the guarded RPC.
+ * Subscribes to the room's public broadcast channel. Every "state_changed"
+ * broadcast now carries a full `GameEventBatch` (BOT_TURN_ARCHITECTURE.md
+ * §5.9/§6.2) rather than just a bare version bump, but its content is never
+ * trusted directly: the hook always refetches the authoritative public/
+ * private state first, and only enqueues the batch for later presentation
+ * (Paket 5) once that refetch confirms it actually landed on exactly the
+ * round/version the batch claims to produce — see `decideBatchAcceptance`.
+ * Reconnect/initial mount never enqueues anything: there is no batch at
+ * that point, only a direct state fetch, so no old events are ever replayed.
  */
 export function useRoomRealtime(roomId: string | null, device?: { deviceId: string; sessionToken: string } | null) {
   const [publicState, setPublicState] = useState<PublicGameState | null>(null);
@@ -25,8 +33,10 @@ export function useRoomRealtime(roomId: string | null, device?: { deviceId: stri
   const [players, setPlayers] = useState<RoomPlayerRow[]>([]);
   const deviceRef = useRef(device);
   deviceRef.current = device;
+  const lastKnownRef = useRef<KnownRoundState | null>(null);
+  const presentation = useEventPresentation();
 
-  async function refetchAll(currentRoomId: string) {
+  async function refetchAll(currentRoomId: string): Promise<PublicGameState | null> {
     const [pub, plist] = await Promise.all([fetchPublicState(currentRoomId), fetchPlayers(currentRoomId)]);
     setPublicState(pub);
     setPlayers(plist as RoomPlayerRow[]);
@@ -35,6 +45,24 @@ export function useRoomRealtime(roomId: string | null, device?: { deviceId: stri
       const priv = await fetchPrivateState(dev.deviceId, dev.sessionToken);
       setPrivateState(priv);
     }
+    if (pub) lastKnownRef.current = { gameId: pub.gameId, version: pub.version };
+    return pub;
+  }
+
+  async function handleBatchBroadcast(currentRoomId: string, payload: unknown) {
+    if (!validateBatchShape(payload)) {
+      console.error("discarding structurally invalid batch broadcast", payload);
+      return;
+    }
+    const batch = payload as GameEventBatch;
+    const lastKnown = lastKnownRef.current;
+    const pub = await refetchAll(currentRoomId); // always authoritative, regardless of the batch's own fate
+    if (!pub) return;
+
+    const decision = decideBatchAcceptance({ batch, refetchedGameId: pub.gameId, refetchedVersion: pub.version, lastKnown });
+    if (decision.kind === "discard") return;
+    if (decision.resetQueue) presentation.resetQueue();
+    presentation.enqueueBatch(batch);
   }
 
   useEffect(() => {
@@ -45,8 +73,8 @@ export function useRoomRealtime(roomId: string | null, device?: { deviceId: stri
 
     const channel = supabase
       .channel(`room:${roomId}:public`)
-      .on("broadcast", { event: "state_changed" }, () => {
-        if (!cancelled) refetchAll(roomId).catch((err) => console.error("refetch failed", err));
+      .on("broadcast", { event: "state_changed" }, ({ payload }) => {
+        if (!cancelled) handleBatchBroadcast(roomId, payload).catch((err) => console.error("refetch failed", err));
       })
       .subscribe();
 
@@ -65,5 +93,11 @@ export function useRoomRealtime(roomId: string | null, device?: { deviceId: stri
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roomId]);
 
-  return { publicState, privateState, players, refetch: () => roomId && refetchAll(roomId) };
+  return {
+    publicState,
+    privateState,
+    players,
+    presentationQueue: presentation.queue,
+    refetch: () => roomId && refetchAll(roomId),
+  };
 }

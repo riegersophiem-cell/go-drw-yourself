@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { joinRoom } from "../multiplayer/api";
 import { saveSession } from "../multiplayer/session";
 import type { DeviceRole } from "../game/types";
+import type { RoomNavState } from "./RoomPage";
 
 const ROLE_OPTIONS: { role: DeviceRole; icon: string; title: string; subtitle: string }[] = [
   { role: "PLAYER", icon: "👤", title: "Spieler", subtitle: "Ich spiele selbst mit" },
@@ -36,7 +37,13 @@ export function Join() {
         role: result.role,
         playerId: result.playerId,
       });
-      navigate(`/room/${result.roomId}`);
+      // join-room only guarantees status LOBBY for a PLAYER join (it rejects
+      // PLAYER joins into a non-LOBBY room); TABLE/SPECTATOR may join a room
+      // in any status, so its real status is genuinely unknown here and must
+      // come from reconnect() on the room page instead of being assumed.
+      const navState: RoomNavState | undefined =
+        result.role === "PLAYER" ? { roomId: result.roomId, deviceId: result.deviceId, confirmedStatus: "LOBBY" } : undefined;
+      navigate(`/room/${result.roomId}`, navState ? { state: navState } : undefined);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {

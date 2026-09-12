@@ -3,7 +3,10 @@
   justify-content: center;
   overflow-x: auto;
   overflow-y: visible;
-  padding: 30px 16px 16px;
+  /* Bottom padding must clear the fanned cards' rotate+translateY visual
+     extent (see FAN_BOTTOM_RESERVE_PX in PlayerHand.tsx) plus the device
+     safe area, or an ancestor's overflow:hidden clips the outer cards. */
+  padding: 30px 16px calc(var(--fan-bottom-reserve, 48px) + env(safe-area-inset-bottom));
   scrollbar-width: thin;
 }
 

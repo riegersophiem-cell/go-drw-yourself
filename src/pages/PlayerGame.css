@@ -43,13 +43,41 @@
   margin-bottom: 12px;
 }
 
+/*
+ * On a short landscape viewport (a phone rotated sideways) the hand alone
+ * (fixed geometry, see PlayerHand.css/Paket 2A — not touched here) already
+ * takes a large share of the available height, leaving very little for the
+ * table above it. Trimming the topbar and draw button down to their
+ * essentials on that one layout (never touching their normal size) hands
+ * that space back to `.table-board__arena` instead, which is what actually
+ * needs it — see the matching Table.css rule for the same breakpoint.
+ */
+@media (max-height: 420px) {
+  .player-game__topbar {
+    padding: 2px 12px;
+    font-size: 0.7rem;
+  }
+
+  button.player-game__draw {
+    padding: 4px 14px;
+    font-size: 0.8rem;
+    margin-bottom: 4px;
+  }
+}
+
 .player-game__hand-wrap {
   transition: opacity 0.15s ease, filter 0.15s ease;
 }
 
+/*
+ * Every card here is already individually disabled (see .uno-card--disabled
+ * in Card.css) during a TARGET/SWAP/color-choice phase, so this must only
+ * add a light "the whole hand is inactive" cue — stacking another strong
+ * opacity/grayscale/blur on top of the per-card dimming compounds (opacity
+ * multiplies) into an unreadably faint, blurred hand.
+ */
 .player-game__hand-wrap--receded {
-  opacity: 0.35;
-  filter: grayscale(0.6) blur(1px);
+  opacity: 0.85;
   pointer-events: none;
 }
 

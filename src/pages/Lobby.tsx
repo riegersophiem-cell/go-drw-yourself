@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { usePendingAction } from "../hooks/usePendingAction";
 import { addBot, removeBot, startGame } from "../multiplayer/api";
 import type { DeviceSession } from "../multiplayer/session";
 import { useRoomRealtime } from "../hooks/useRoomRealtime";
@@ -6,13 +7,23 @@ import { supabase } from "../supabase/client";
 
 export interface LobbyProps {
   session: DeviceSession;
+  /**
+   * Seeds the host check when the caller already knows the answer for
+   * certain (RoomPage passes this through only from server-confirmed nav
+   * state, e.g. createRoom() always makes the creating device the host —
+   * see RoomNavState in RoomPage.tsx). Avoids a frame of the wrong
+   * "Warte, bis der Host…" copy while the query below is still in flight.
+   * The query still runs regardless, so a wrong or absent value self-corrects.
+   */
+  initialIsHost?: boolean;
 }
 
-export function Lobby({ session }: LobbyProps) {
+export function Lobby({ session, initialIsHost }: LobbyProps) {
   const { players } = useRoomRealtime(session.roomId);
-  const [isHost, setIsHost] = useState(false);
+  const [isHost, setIsHost] = useState(initialIsHost ?? false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const pendingStart = usePendingAction<{ type: "START_GAME" }>();
 
   useEffect(() => {
     supabase
@@ -47,11 +58,18 @@ export function Lobby({ session }: LobbyProps) {
     }
   }
 
-  async function handleStart() {
+  async function handleStart(retry = false) {
+    const action = { type: "START_GAME" } as const;
+    const pending = pendingStart.begin(action, retry);
     setBusy(true);
     setError(null);
     try {
-      await startGame(session.deviceId, session.sessionToken);
+      await startGame(session.deviceId, session.sessionToken, {
+        actionId: pending.actionId,
+        expectedGameId: null,
+        expectedVersion: null,
+      });
+      pendingStart.complete(pending.actionId);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -91,14 +109,24 @@ export function Lobby({ session }: LobbyProps) {
           {session.role !== "PLAYER" && <li>{session.role === "TABLE" ? "🃏 Dieses Gerät: Spieltisch" : "👁 Dieses Gerät: Zuschauer"}</li>}
         </ul>
 
-        {error && <p className="error-text">{error}</p>}
+        {error && (
+          <div>
+            <p className="error-text">{error}</p>
+            {pendingStart.pending && (
+              <>
+                <button className="btn btn--secondary" onClick={() => void handleStart(true)} disabled={busy}>Erneut versuchen</button>
+                <button className="btn btn--secondary" onClick={() => { pendingStart.cancel(); setError(null); }} disabled={busy}>Abbrechen</button>
+              </>
+            )}
+          </div>
+        )}
 
         {isHost && (
           <>
             <button className="btn btn--secondary" onClick={handleAddBot} disabled={busy}>
               Bot hinzufügen
             </button>
-            <button className="btn btn--primary" onClick={handleStart} disabled={busy || players.length < 2}>
+            <button className="btn btn--primary" onClick={() => void handleStart()} disabled={busy || players.length < 2}>
               Spiel starten
             </button>
             {players.length < 2 && <p className="field-label">Mindestens 2 Spieler nötig.</p>}

@@ -108,6 +108,7 @@ export type PendingEffect =
 
 export interface GameState {
   roomId: string;
+  gameId: string;
   version: number;
   turnNumber: number;
   direction: Direction;
@@ -142,6 +143,7 @@ export interface PublicPlayerView {
 
 export interface PublicGameState {
   roomId: string;
+  gameId: string;
   version: number;
   status: RoomStatus;
   direction: Direction;
