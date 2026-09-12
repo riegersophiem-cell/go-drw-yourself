@@ -1,0 +1,70 @@
+.player-game {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  background: linear-gradient(180deg, #09090b, #18181b);
+  color: white;
+  overflow: hidden;
+}
+
+.player-game__topbar {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 16px;
+  font-size: 0.85rem;
+  color: #a1a1aa;
+  flex: 0 0 auto;
+}
+
+.player-game__board {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.player-game__status {
+  text-align: center;
+  font-weight: 700;
+  padding: 6px;
+  color: #facc15;
+}
+
+.player-game__penalty {
+  align-self: center;
+  background: #e5484d;
+  padding: 6px 18px;
+  border-radius: 999px;
+  font-weight: 800;
+  margin: 0 auto;
+}
+
+.player-game__draw {
+  align-self: center;
+  margin-bottom: 12px;
+}
+
+.color-picker {
+  text-align: center;
+  padding: 12px;
+}
+
+.color-picker__options {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+}
+
+.color-picker__swatch {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 3px solid white;
+  cursor: pointer;
+}
+
+.swap-picker__options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+}

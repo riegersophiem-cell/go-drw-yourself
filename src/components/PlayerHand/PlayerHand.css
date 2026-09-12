@@ -1,0 +1,21 @@
+.player-hand {
+  display: flex;
+  overflow-x: auto;
+  gap: -18px;
+  padding: 12px 16px 20px;
+  scrollbar-width: thin;
+}
+
+.player-hand__slot {
+  margin-right: -22px;
+  flex-shrink: 0;
+}
+
+.player-hand__slot:last-child {
+  margin-right: 0;
+}
+
+.player-hand__empty {
+  color: #a1a1aa;
+  padding: 20px;
+}

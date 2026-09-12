@@ -1,0 +1,62 @@
+.winner-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px;
+  text-align: center;
+  color: white;
+  background: radial-gradient(circle at 50% 30%, rgba(20, 83, 45, 0.96), rgba(5, 46, 22, 0.98));
+}
+
+.winner-overlay__trophy {
+  font-size: 4rem;
+  filter: drop-shadow(0 4px 12px rgba(250, 204, 21, 0.5));
+}
+
+.winner-overlay__name {
+  font-size: 2.2rem;
+  font-weight: 900;
+  color: #facc15;
+}
+
+.winner-overlay__caption {
+  font-size: 1.3rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  margin-bottom: 8px;
+}
+
+.winner-overlay__scores {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 12px;
+  padding: 16px 24px;
+  min-width: 240px;
+}
+
+.winner-overlay__scores ul {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.winner-overlay__scores li {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.winner-overlay__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: min(280px, 90vw);
+  margin-top: 12px;
+}
