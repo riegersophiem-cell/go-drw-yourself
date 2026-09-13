@@ -6,6 +6,7 @@ import { clearSession, type DeviceSession } from "../multiplayer/session";
 import { useRoomRealtime } from "../hooks/useRoomRealtime";
 import { AVATAR_IMAGE } from "../game/avatarImages";
 import { useIsRoomHost } from "../hooks/useIsRoomHost";
+import { buildInviteShareData, buildInviteText } from "../multiplayer/invite";
 
 export interface LobbyProps {
   session: DeviceSession;
@@ -27,6 +28,7 @@ export function Lobby({ session, initialIsHost }: LobbyProps) {
   const isHost = initialIsHost === true || liveIsHost;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [inviteStatus, setInviteStatus] = useState<string | null>(null);
   const pendingStart = usePendingAction<{ type: "START_GAME" }>();
 
   async function handleAddBot() {
@@ -87,11 +89,55 @@ export function Lobby({ session, initialIsHost }: LobbyProps) {
 
   const joinUrl = `${window.location.origin}/join/${session.roomCode}`;
 
+  async function copyInvitation() {
+    const text = buildInviteText(joinUrl);
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      textarea.setAttribute("readonly", "");
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      textarea.select();
+      const copied = document.execCommand("copy");
+      textarea.remove();
+      if (!copied) throw new Error("COPY_FAILED");
+    }
+    setInviteStatus("Einladungstext und Raumlink kopiert.");
+  }
+
+  async function handleInvite() {
+    setInviteStatus(null);
+    if (navigator.share) {
+      try {
+        await navigator.share(buildInviteShareData(joinUrl));
+        setInviteStatus("Einladung geteilt.");
+        return;
+      } catch (shareError) {
+        if (shareError instanceof DOMException && shareError.name === "AbortError") return;
+      }
+    }
+
+    try {
+      await copyInvitation();
+    } catch {
+      setInviteStatus("Kopieren fehlgeschlagen. Nutze bitte den angezeigten Raumlink.");
+    }
+  }
+
   return (
     <div className="page page--centered">
       <h1 className="brand-title">Raum {session.roomCode}</h1>
       <div className="panel panel--wide">
-        <p className="field-label">Beitreten unter: {joinUrl}</p>
+        <div className="lobby-invite">
+          <p className="field-label">Beitreten unter: <span className="lobby-invite__url">{joinUrl}</span></p>
+          <button className="btn btn--primary lobby-invite__button" onClick={() => void handleInvite()}>
+            Spieler einladen
+          </button>
+          {inviteStatus && <p className="lobby-invite__status" role="status" aria-live="polite">{inviteStatus}</p>}
+        </div>
 
         <ul className="lobby-player-list">
           {players.map((p) => (

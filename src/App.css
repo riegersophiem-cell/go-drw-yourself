@@ -166,6 +166,33 @@ body {
   text-align: left;
 }
 
+.lobby-invite {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid rgba(250, 204, 21, 0.28);
+  border-radius: 12px;
+  background: rgba(250, 204, 21, 0.06);
+}
+
+.lobby-invite .field-label {
+  margin: 0;
+}
+
+.lobby-invite__url {
+  overflow-wrap: anywhere;
+}
+
+.lobby-invite__button {
+  width: 100%;
+}
+
+.lobby-invite__status {
+  margin: 0;
+  color: #fde68a;
+  font-size: 0.82rem;
+}
+
 .lobby-player-list li {
   display: flex;
   justify-content: space-between;
