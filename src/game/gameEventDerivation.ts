@@ -41,7 +41,13 @@ export function deriveGameActionEvents(before: GameState, after: GameState, acto
       }
       if (card.type === "GIVE_TWO_TO_LOWEST") {
         for (const player of after.players) {
-          const count = handCount(after, player.playerId) - handCount(before, player.playerId);
+          // The actor's own hand also shrank by the card they just played, so
+          // a plain after-minus-before delta undercounts by 1 whenever the
+          // actor themselves ends up being the lowest-hand recipient (a real,
+          // reproducible case - confirmed live: hand went 3 -> 2 (play) -> 4
+          // (bonus draw), a net +1, though the effect draws 2 cards).
+          const rawCount = handCount(after, player.playerId) - handCount(before, player.playerId);
+          const count = player.playerId === actorPlayerId ? rawCount + 1 : rawCount;
           if (count > 0) result.push(event("DRAW", player.playerId, { playerId: player.playerId, count }, after.version));
         }
       }

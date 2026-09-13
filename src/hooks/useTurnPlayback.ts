@@ -14,6 +14,7 @@ export function useTurnPlayback(params: {
   const { queue, gameId, acknowledgeBatch, clearQueue } = params;
   const [active, setActive] = useState<ActiveBatch | null>(null);
   const [beatIndex, setBeatIndex] = useState(0);
+  const [skipReady, setSkipReady] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
   const [paused, setPaused] = useState(() => document.hidden);
   const generation = useRef(0);
@@ -42,8 +43,22 @@ export function useTurnPlayback(params: {
     // oxlint-disable-next-line react/set-state-in-effect
     setBeatIndex(0);
     // oxlint-disable-next-line react/set-state-in-effect
+    setSkipReady(false);
+    // oxlint-disable-next-line react/set-state-in-effect
     setActive({ batchId: batch.batchId, gameId: batch.gameId, beats });
   }, [active, queue, acknowledgeBatch]);
+
+  // UX spec: the skip button becomes clickable 500ms after a chain starts,
+  // so an accidental double-click right after pressing "play" doesn't also
+  // wipe the whole chain it just started.
+  useEffect(() => {
+    if (!active) return;
+    const timer = window.setTimeout(() => setSkipReady(true), 500);
+    return () => window.clearTimeout(timer);
+    // `active` (not beatIndex) is the right key: it only changes reference
+    // when a new batch actually starts, so this re-arms once per batch, not
+    // on every beat within the same batch.
+  }, [active]);
 
   useEffect(() => {
     if (!active) return;
@@ -89,9 +104,17 @@ export function useTurnPlayback(params: {
     generation.current += 1;
     remainingDuration.current = null;
     scheduledBeatId.current = null;
+    hiddenAt.current = null;
     clearQueue();
     setActive(null);
     setBeatIndex(0);
+    // skip() is also how the >2s-hidden auto-skip resolves (called while
+    // paused is still true from the visibilitychange handler) - without this,
+    // the NEXT batch starts already "paused" and its beat-advance effect bails
+    // out on its very first tick, freezing the narrator on beat 1 forever.
+    // Confirmed live: after one long-hide auto-skip, a later chain got stuck
+    // permanently on its first beat until Escape/skip was pressed manually.
+    setPaused(false);
   }, [clearQueue]);
 
   useEffect(() => {
@@ -132,7 +155,7 @@ export function useTurnPlayback(params: {
     isPlaying: active !== null,
     position: active ? beatIndex + 1 : 0,
     total: active?.beats.length ?? 0,
-    canSkip: active !== null && queuedBeatCount >= 2,
+    canSkip: active !== null && queuedBeatCount >= 2 && skipReady,
     reducedMotion,
     skip,
   };
