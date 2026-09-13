@@ -4,7 +4,11 @@
   grid-template-rows: auto minmax(0, 1fr) clamp(250px, 34vh, 360px);
   overflow: hidden;
   color: #111827;
-  background: radial-gradient(ellipse at 50% 40%, rgba(255,255,255,.94) 0 26%, rgba(226,236,248,.76) 58%, rgba(196,211,228,.9) 100%), #dbe5f0;
+  /* Stops pushed out (and the outer tone lightened) so the vignette never
+     plateaus into a visibly boxed-off panel behind the tall, expanded hand
+     dock at the bottom of the viewport - it only did with the collapsed
+     54px dock, which stayed inside the near-white center of the gradient. */
+  background: radial-gradient(ellipse at 50% 40%, rgba(255,255,255,.94) 0 45%, rgba(233,240,249,.85) 78%, rgba(219,229,240,.92) 100%), #dbe5f0;
 }
 .player-game--hand-collapsed { grid-template-rows: auto minmax(0, 1fr) 54px; }
 .player-game--turn-attention:before {
