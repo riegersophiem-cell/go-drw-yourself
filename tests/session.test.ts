@@ -61,6 +61,7 @@ class SetItemFailsStorage extends MemoryStorage {
 }
 
 const STORAGE_KEY = "uno_no_mercy_session";
+const RECOVERY_STORAGE_KEY = "uno_no_mercy_recovery_sessions";
 
 const validSession: DeviceSession = {
   roomId: "room-1",
@@ -97,10 +98,11 @@ describe("saveSession / loadSession round-trip", () => {
     expect(loadSession()).toEqual(tableSession);
   });
 
-  it("never writes to localStorage on save, and clears any legacy entry there", () => {
+  it("writes a room-keyed recovery copy and clears the old legacy slot", () => {
     fakeLocalStorage.setItem(STORAGE_KEY, JSON.stringify(validSession));
     saveSession({ ...validSession, roomId: "room-2" });
     expect(fakeLocalStorage.getItem(STORAGE_KEY)).toBeNull();
+    expect(JSON.parse(fakeLocalStorage.getItem(RECOVERY_STORAGE_KEY)!)["room-2"]).toEqual({ ...validSession, roomId: "room-2" });
   });
 });
 
@@ -184,12 +186,13 @@ describe("failed writes must never destroy the only persisted copy", () => {
     expect(fakeLocalStorage.getItem(STORAGE_KEY)).toBe(JSON.stringify(validSession));
   });
 
-  it("saveSession(): write to sessionStorage fails → an existing legacy entry is preserved as a fallback", () => {
+  it("saveSession(): write to sessionStorage fails → the new recovery copy remains available", () => {
     fakeLocalStorage.setItem(STORAGE_KEY, JSON.stringify(validSession));
     (globalThis as unknown as { sessionStorage: Storage }).sessionStorage = new SetItemFailsStorage();
 
     expect(() => saveSession({ ...validSession, roomId: "room-2" })).not.toThrow();
-    expect(fakeLocalStorage.getItem(STORAGE_KEY)).toBe(JSON.stringify(validSession));
+    expect(fakeLocalStorage.getItem(STORAGE_KEY)).toBeNull();
+    expect(JSON.parse(fakeLocalStorage.getItem(RECOVERY_STORAGE_KEY)!)["room-2"]).toEqual({ ...validSession, roomId: "room-2" });
   });
 
   it("migration: setItem() succeeds → tab session written AND legacy entry removed", () => {
@@ -256,10 +259,37 @@ describe("clearSession", () => {
     clearSession();
     expect(fakeSessionStorage.getItem(STORAGE_KEY)).toBeNull();
     expect(fakeLocalStorage.getItem(STORAGE_KEY)).toBeNull();
+    expect(fakeLocalStorage.getItem(RECOVERY_STORAGE_KEY)).toBeNull();
   });
 
   it("is a no-op that does not throw when nothing was stored", () => {
     expect(() => clearSession()).not.toThrow();
+  });
+});
+
+describe("closed-tab recovery", () => {
+  it("restores the exact room identity into a fresh tab", () => {
+    saveSession(validSession);
+    (globalThis as unknown as { sessionStorage: Storage }).sessionStorage = new MemoryStorage();
+
+    expect(loadSession(validSession.roomId)).toEqual(validSession);
+    expect(JSON.parse((globalThis as unknown as { sessionStorage: Storage }).sessionStorage.getItem(STORAGE_KEY)!)).toEqual(validSession);
+  });
+
+  it("does not adopt a recovery identity without an exact room id", () => {
+    saveSession(validSession);
+    (globalThis as unknown as { sessionStorage: Storage }).sessionStorage = new MemoryStorage();
+
+    expect(loadSession()).toBeNull();
+    expect(loadSession("different-room")).toBeNull();
+  });
+
+  it("keeps recovery entries for different rooms separate", () => {
+    saveSession(validSession);
+    saveSession({ ...validSession, roomId: "room-2", deviceId: "device-2", playerId: "player-2" });
+    (globalThis as unknown as { sessionStorage: Storage }).sessionStorage = new MemoryStorage();
+
+    expect(loadSession("room-1")).toEqual(validSession);
   });
 });
 

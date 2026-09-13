@@ -23,7 +23,7 @@ export function pacedDuration(baseMs: number, beatIndex: number, elapsedMs: numb
   return Math.max(180, Math.round(baseMs * chainFactor * longFactor));
 }
 
-/** Bots stay readable for a full three seconds; motion reduction changes animation, not reading time. */
+/** Bots stay readable for a full five seconds; motion reduction changes animation, not reading time. */
 export function playbackDuration(baseMs: number, beatIndex: number, elapsedMs: number, reducedMotion: boolean, isBot: boolean): number {
-  return isBot ? 3000 : pacedDuration(baseMs, beatIndex, elapsedMs, reducedMotion);
+  return isBot ? 5000 : pacedDuration(baseMs, beatIndex, elapsedMs, reducedMotion);
 }

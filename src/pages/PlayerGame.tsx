@@ -12,6 +12,7 @@ import { WinnerOverlay } from "../components/WinnerOverlay/WinnerOverlay";
 import type { GameAction } from "../game/actions";
 import type { CardColor } from "../game/types";
 import { useIsRoomHost } from "../hooks/useIsRoomHost";
+import { useHasTableDevice } from "../hooks/useHasTableDevice";
 import "./PlayerGame.css";
 
 const COLOR_CHOICES: { color: CardColor; hex: string; label: string }[] = [
@@ -30,6 +31,7 @@ export function PlayerGame({ session }: PlayerGameProps) {
   const botPlayerIds = useMemo(() => publicState?.players.filter((player) => player.type === "BOT").map((player) => player.playerId) ?? [], [publicState?.players]);
   const playback = useTurnPlayback({ queue: presentationQueue, gameId: publicState?.gameId ?? null, acknowledgeBatch: acknowledgePresentationBatch, clearQueue: clearPresentationQueue, botPlayerIds });
   const isHost = useIsRoomHost(session);
+  const hasTableDevice = useHasTableDevice(session.roomId);
   type PendingGameAction = { action: GameAction; expectedGameId: string | null; expectedVersion: number };
   const pendingAction = usePendingAction<PendingGameAction>();
   const [selected, setSelected] = useState<string | null>(null);
@@ -40,6 +42,7 @@ export function PlayerGame({ session }: PlayerGameProps) {
   const [handOpen, setHandOpen] = useState(true);
   const [removingPlayerId, setRemovingPlayerId] = useState<string | null>(null);
   const [acknowledgedTurn, setAcknowledgedTurn] = useState<string | null>(null);
+  const [handOnly, setHandOnly] = useState(false);
 
   const isMyTurn = publicState?.currentPlayerId === session.playerId;
   const needsColor = isMyTurn && publicState?.phase === "WAITING_FOR_COLOR";
@@ -64,6 +67,8 @@ export function PlayerGame({ session }: PlayerGameProps) {
       window.removeEventListener("touchstart", acknowledge);
     };
   }, [attentionTurn, needsTurnAttention]);
+
+  const effectiveHandOnly = handOnly && hasTableDevice;
 
   const otherActiveCandidates = useMemo(() => publicState?.players.filter((p) => p.playerId !== session.playerId && !p.eliminated) ?? [], [publicState, session.playerId]);
   const displayedHand = useMemo(() => {
@@ -142,16 +147,27 @@ export function PlayerGame({ session }: PlayerGameProps) {
   const legalIds = needsExtraDiscard ? privateState.ownHand.map((card) => card.instanceId) : isMyTurn ? privateState.legalMoves : [];
 
   return (
-    <main className={`player-game ${handOpen ? "" : "player-game--hand-collapsed"} ${needsTurnAttention ? "player-game--turn-attention" : ""}`}>
+    <main className={`player-game ${handOpen ? "" : "player-game--hand-collapsed"} ${effectiveHandOnly ? "player-game--hand-only" : ""} ${needsTurnAttention ? "player-game--turn-attention" : ""}`}>
       <header className="player-game__topbar">
         <div className="player-game__brand"><strong>GO DR*W<br />YOURSELF</strong><span>Swap it. Stack it. Make it someone else&apos;s problem.</span></div>
         <div className="player-game__room"><span>Raum</span><strong>{session.roomCode}</strong></div>
-        <div className="player-game__top-actions"><div className="player-game__meta"><span aria-hidden="true">♙</span><strong>{publicState.players.filter((player) => !player.eliminated).length} / 8</strong></div><button type="button" onClick={() => void handleDeparture(session.playerId!, "LEAVE")}>Aufgeben</button></div>
+        <div className="player-game__top-actions">
+          {hasTableDevice && <div className="player-game__view-switch" aria-label="Ansicht wählen">
+            <button type="button" aria-pressed={!effectiveHandOnly} onClick={() => setHandOnly(false)}>Vollständige Ansicht</button>
+            <button type="button" aria-pressed={effectiveHandOnly} onClick={() => { setHandOpen(true); setHandOnly(true); }}>Nur meine Hand</button>
+          </div>}
+          <div className="player-game__meta"><span aria-hidden="true">♙</span><strong>{publicState.players.filter((player) => !player.eliminated).length} / 8</strong></div>
+          <button type="button" onClick={() => void handleDeparture(session.playerId!, "LEAVE")}>Aufgeben</button>
+        </div>
       </header>
 
       <div className="player-game__board"><Table publicState={publicState} compact ownPlayerId={session.playerId ?? undefined} canRemovePlayers={isHost && !playback.isPlaying} removingPlayerId={removingPlayerId} onRemovePlayer={(playerId) => void handleDeparture(playerId, "REMOVE")} playback={playback.visibleBeat ? { beat: playback.visibleBeat, position: playback.position, total: playback.total, canSkip: playback.canSkip, onSkip: playback.skip, active: !!playback.activeBeat } : null} /></div>
 
       <section className="player-game__dock" aria-label="Deine Karten und Aktionen">
+        {effectiveHandOnly && <div className="player-game__hand-only-status" role="status">
+          <strong>{isMyTurn ? "Du bist dran" : `${publicState.players.find((player) => player.playerId === publicState.currentPlayerId)?.displayName ?? "Nächster Spieler"} ist dran`}</strong>
+          <span>{publicState.pendingEffect?.type === "DRAW_STACK" ? `Aktiver Ziehstapel: +${publicState.pendingEffect.amount}` : `${privateState.ownHand.length} Karten auf deiner Hand`}</span>
+        </div>}
         <button className="player-game__hand-toggle" type="button" aria-expanded={handOpen} onClick={() => setHandOpen((open) => !open)}>{handOpen ? "⌄ Hand ausblenden" : "⌃ Karten anzeigen"}</button>
         {error && <div className="player-game__retry"><p>{error}</p>{pendingAction.pending && <><button onClick={() => pendingAction.pending && void runAction(pendingAction.pending.action.action, true)} disabled={busy}>Erneut versuchen</button><button onClick={() => { pendingAction.cancel(); setError(null); }} disabled={busy}>Abbrechen</button></>}</div>}
         {(showColorPicker || needsColor) && <div className="player-game__choice"><strong>Wähle eine Farbe</strong><div>{COLOR_CHOICES.map((choice) => <button key={choice.color} disabled={playback.isPlaying} style={{ background: choice.hex }} aria-label={choice.label} onClick={() => chooseColor(choice.color)} />)}</div></div>}

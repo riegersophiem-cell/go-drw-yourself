@@ -40,6 +40,7 @@ export function RoomPage() {
   const [initialIsHost, setInitialIsHost] = useState<boolean | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showReconnectMessage, setShowReconnectMessage] = useState(false);
 
   // Bumped on every authoritative status update (a realtime event, or the
   // background reconciliation below applying its result) so a stale async
@@ -51,7 +52,7 @@ export function RoomPage() {
   const needsReconciliationRef = useRef(false);
 
   useEffect(() => {
-    const stored = loadSession();
+    const stored = loadSession(roomId);
     if (!stored || stored.roomId !== roomId) {
       navigate("/join");
       return;
@@ -80,6 +81,7 @@ export function RoomPage() {
       .then((res) => {
         statusVersionRef.current++;
         setStatus(res.roomStatus as RoomStatus);
+        setShowReconnectMessage(true);
       })
       .catch((e) => setError(e instanceof Error ? e.message : String(e)))
       .finally(() => setLoading(false));
@@ -133,11 +135,21 @@ export function RoomPage() {
     };
   }, [roomId]);
 
+  useEffect(() => {
+    if (!showReconnectMessage) return;
+    const timeout = window.setTimeout(() => setShowReconnectMessage(false), 3200);
+    return () => window.clearTimeout(timeout);
+  }, [showReconnectMessage]);
+
   if (loading) return <div className="page page--centered">Verbinde…</div>;
   if (error) return <div className="page page--centered error-text">{error}</div>;
   if (!session || !roomId || !status) return null;
 
-  if (status === "LOBBY") return <Lobby session={session} initialIsHost={initialIsHost} />;
-  if (session.role === "PLAYER" && session.playerId) return <PlayerGame session={session} />;
-  return <TableGame session={session} />;
+  const content = status === "LOBBY"
+    ? <Lobby session={session} initialIsHost={initialIsHost} />
+    : session.role === "PLAYER" && session.playerId
+      ? <PlayerGame session={session} />
+      : <TableGame session={session} />;
+
+  return <>{content}{showReconnectMessage && <div className="reconnect-toast" role="status">Du bist wieder im Spiel.</div>}</>;
 }

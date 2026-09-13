@@ -17,9 +17,9 @@ describe("playbackMachine", () => {
     expect(pacedDuration(1000, 0, 0, true)).toBe(180);
   });
 
-  it("keeps every bot action readable for three seconds", () => {
-    expect(playbackDuration(850, 8, 12000, false, true)).toBe(3000);
-    expect(playbackDuration(850, 0, 0, true, true)).toBe(3000);
+  it("keeps every bot action readable for five seconds", () => {
+    expect(playbackDuration(850, 8, 12000, false, true)).toBe(5000);
+    expect(playbackDuration(850, 0, 0, true, true)).toBe(5000);
     expect(playbackDuration(850, 0, 0, false, false)).toBe(850);
   });
 });
