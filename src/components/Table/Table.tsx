@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
 import type { PublicGameState, PublicPlayerView } from "../../game/types";
 import { AVATAR_IMAGE } from "../../game/avatarImages";
 import { Card } from "../Card/Card";
@@ -12,7 +12,10 @@ export interface TableProps {
   publicState: PublicGameState;
   compact?: boolean;
   ownPlayerId?: string;
-  playback?: { beat: PlaybackBeat; position: number; total: number; canSkip: boolean; onSkip: () => void } | null;
+  playback?: { beat: PlaybackBeat; position: number; total: number; canSkip: boolean; onSkip: () => void; active: boolean } | null;
+  canRemovePlayers?: boolean;
+  removingPlayerId?: string | null;
+  onRemovePlayer?: (playerId: string) => void;
 }
 
 /**
@@ -54,6 +57,18 @@ function initials(name: string): string {
   return name.trim().split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase() ?? "").join("") || "?";
 }
 
+function useNarrowTable(): boolean {
+  return useSyncExternalStore(
+    (notify) => {
+      const query = window.matchMedia("(max-width: 760px)");
+      query.addEventListener("change", notify);
+      return () => query.removeEventListener("change", notify);
+    },
+    () => window.matchMedia("(max-width: 760px)").matches,
+    () => false,
+  );
+}
+
 function effectLabel(publicState: PublicGameState): string {
   if (publicState.pendingEffect?.type === "DRAW_STACK") return `+${publicState.pendingEffect.amount}`;
   if (publicState.phase === "WAITING_FOR_COLOR") return "Farbe wählen";
@@ -78,10 +93,10 @@ function useHandShufflePulse(publicState: PublicGameState): boolean {
   return pulsing;
 }
 
-export function Table({ publicState, compact = false, ownPlayerId, playback }: TableProps) {
+export function Table({ publicState, compact = false, ownPlayerId, playback, canRemovePlayers = false, removingPlayerId, onRemovePlayer }: TableProps) {
   const currentPlayer = publicState.players.find((player) => player.playerId === publicState.currentPlayerId);
   const shufflePulse = useHandShufflePulse(publicState);
-  const narrow = typeof window !== "undefined" && window.innerWidth <= 760;
+  const narrow = useNarrowTable();
   /* 4-6 players still fit the absolute per-seat layout at desktop widths, but
      at 375-760px there isn't enough clear width beside the center-grid for
      more than the two seats the 3-player case uses (see seatStyle above) —
@@ -89,18 +104,19 @@ export function Table({ publicState, compact = false, ownPlayerId, playback }: T
      collision entirely, so mobile widths opt into it a bit earlier. Own
      player still stands out there via its light card background and the
      "DEIN ZUG" pill, just without the dedicated top-center slot. */
-  const crowded = publicState.players.length >= CROWDED_PLAYER_THRESHOLD || (narrow && publicState.players.length >= 4);
+  const seatedPlayers = useMemo(() => publicState.players.filter((player) => !player.eliminated), [publicState.players]);
+  const crowded = seatedPlayers.length >= CROWDED_PLAYER_THRESHOLD || narrow;
   const orderedPlayers = useMemo(() => {
-    const ownIndex = ownPlayerId ? publicState.players.findIndex((player) => player.playerId === ownPlayerId) : -1;
-    return ownIndex > 0 ? [...publicState.players.slice(ownIndex), ...publicState.players.slice(0, ownIndex)] : publicState.players;
-  }, [ownPlayerId, publicState.players]);
+    const ownIndex = ownPlayerId ? seatedPlayers.findIndex((player) => player.playerId === ownPlayerId) : -1;
+    return ownIndex > 0 ? [...seatedPlayers.slice(ownIndex), ...seatedPlayers.slice(0, ownIndex)] : seatedPlayers;
+  }, [ownPlayerId, seatedPlayers]);
 
   function renderPlayer(player: PublicPlayerView, seatIndex: number | null) {
     const isActive = player.playerId === publicState.currentPlayerId;
     const isOwn = player.playerId === ownPlayerId;
     const disconnected = !player.connected && player.type === "HUMAN";
     return (
-      <article key={player.playerId} className={`table-board__player ${crowded ? "table-board__player--crowded" : ""} ${isActive ? "table-board__player--active" : ""} ${isOwn ? "table-board__player--own" : ""} ${!isOwn && seatIndex !== null ? "table-board__player--side" : ""} ${shufflePulse ? "table-board__player--pulse" : ""} ${playback?.beat.actorPlayerId === player.playerId ? "table-board__player--playback-actor" : ""} ${playback?.beat.targetPlayerId === player.playerId ? "table-board__player--playback-target" : ""}`} style={seatIndex === null ? undefined : seatStyle(seatIndex, orderedPlayers.length)} title={`${player.displayName} – ${player.cardCount} Karten`}>
+      <article key={player.playerId} className={`table-board__player ${crowded ? "table-board__player--crowded" : ""} ${isActive ? "table-board__player--active" : ""} ${isOwn ? "table-board__player--own" : ""} ${!isOwn && seatIndex !== null ? "table-board__player--side" : ""} ${shufflePulse ? "table-board__player--pulse" : ""} ${playback?.active && playback.beat.actorPlayerId === player.playerId ? "table-board__player--playback-actor" : ""} ${playback?.active && playback.beat.targetPlayerId === player.playerId ? "table-board__player--playback-target" : ""}`} style={seatIndex === null ? undefined : seatStyle(seatIndex, orderedPlayers.length)} title={`${player.displayName} – ${player.cardCount} Karten`}>
         <div className={`table-board__avatar ${player.type === "BOT" ? "table-board__avatar--bot" : ""}`} aria-hidden="true">
           {AVATAR_IMAGE[player.avatar] ? <img className="table-board__avatar-img" src={AVATAR_IMAGE[player.avatar]} alt="" /> : initials(player.displayName)}
           <span className={`table-board__presence ${disconnected ? "table-board__presence--offline" : ""}`} />
@@ -111,12 +127,13 @@ export function Table({ publicState, compact = false, ownPlayerId, playback }: T
         </div>
         {isActive && <span className="table-board__turn-pill">{isOwn ? "DEIN ZUG" : "AM ZUG"}</span>}
         {publicState.pendingSkipTargets[player.playerId] > 0 && <span className="table-board__skip-stamp">AUSGESETZT</span>}
+        {canRemovePlayers && !isOwn && <button className="table-board__remove-player" type="button" disabled={!!removingPlayerId} onClick={() => onRemovePlayer?.(player.playerId)} aria-label={`${player.displayName} entfernen`}>{removingPlayerId === player.playerId ? "…" : "×"}</button>}
       </article>
     );
   }
 
   return (
-    <section className={`table-board ${compact ? "table-board--compact" : ""} ${playback ? `table-board--playback table-board--playback-${playback.beat.kind.toLowerCase()}` : ""}`} aria-label="Spieltisch">
+    <section className={`table-board ${compact ? "table-board--compact" : ""} ${playback?.active ? `table-board--playback table-board--playback-${playback.beat.kind.toLowerCase()}` : ""}`} aria-label="Spieltisch">
       <div className="table-board__surface">
         <div className="table-board__rings" aria-hidden="true" />
         {crowded ? <div className="table-board__crowded-seats">{orderedPlayers.map((player) => renderPlayer(player, null))}</div> : orderedPlayers.map((player, index) => renderPlayer(player, index))}
@@ -151,7 +168,7 @@ export function Table({ publicState, compact = false, ownPlayerId, playback }: T
           </div>
         </div>
       </div>
-      {playback && <TurnPlayback key={playback.beat.id} beat={playback.beat} players={publicState.players} position={playback.position} total={playback.total} canSkip={playback.canSkip} onSkip={playback.onSkip} />}
+      {playback && <TurnPlayback key={`${playback.beat.id}:${playback.active}`} beat={playback.beat} players={publicState.players} position={playback.position} total={playback.total} canSkip={playback.canSkip} onSkip={playback.onSkip} active={playback.active} />}
     </section>
   );
 }

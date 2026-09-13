@@ -155,6 +155,27 @@
   font-weight: 900;
   background: #e5484d;
 }
+.table-board__remove-player {
+  position: absolute;
+  z-index: 3;
+  top: -7px;
+  right: -7px;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid rgba(255,255,255,.8);
+  border-radius: 50%;
+  color: #fff;
+  font: inherit;
+  font-size: 1rem;
+  line-height: 1;
+  background: #dc4650;
+  box-shadow: 0 4px 10px rgba(106,24,32,.3);
+  cursor: pointer;
+}
+.table-board__remove-player:disabled { opacity: .55; cursor: wait; }
 
 .table-board__center-stage {
   position: absolute;
@@ -405,8 +426,8 @@
     font-size: .48rem;
   }
   .table-board__center-stage {
-    top: 55%;
-    width: 94%;
+    top: 59%;
+    width: 100%;
     gap: 10px;
   }
   .table-board__effect-chip {
@@ -433,6 +454,23 @@
   }
   .table-board__status-rail > div > span { font-size: .9rem; }
   .table-board__status-rail strong { font-size: .58rem; }
+
+  .table-board__crowded-seats {
+    inset: 48px 0 auto;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    gap: 7px;
+    overflow-x: auto;
+    padding: 6px 14px 16px;
+    scrollbar-width: none;
+    overscroll-behavior-inline: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+  .table-board__crowded-seats::-webkit-scrollbar { height: 0; }
+  .table-board__player.table-board__player--crowded {
+    flex: 0 0 116px;
+    width: 116px;
+  }
 
   /* Pile/direction captions ("ZIEHSTAPEL", "SPIELRICHTUNG", ...) are long
      words that would otherwise overflow their now-narrower mobile columns
@@ -476,6 +514,26 @@
      a second row of cards reached down into the center-grid below. */
   .table-board__player--crowded .table-board__player-name { line-height: 1.15; }
   .table-board__player--crowded .table-board__player-count { line-height: 1.1; }
+}
+
+@media (max-width: 420px) {
+  .table-board__center-stage { top: 60%; }
+  .table-board__effect-chip { min-width: 0; width: min(88%, 250px); box-sizing: border-box; }
+  .table-board__center-grid { grid-template-columns: 50px 96px 38px; gap: 6px; }
+  .table-board__direction small,
+  .table-board__direction strong { display: none; }
+  .table-board__direction-orb { width: 36px; height: 36px; font-size: 1.25rem; }
+  .table-board__status-rail { width: 96%; }
+  .table-board__status-rail > div { padding: 5px 4px; }
+  .table-board__status-rail small { font-size: .48rem; }
+  .table-board__status-rail strong { font-size: .52rem; }
+}
+
+@media (max-width: 320px) {
+  .table-board__crowded-seats { padding-inline: 10px; }
+  .table-board__center-grid { grid-template-columns: 46px 88px 34px; gap: 4px; }
+  .table-board__status-rail > div > span { display: none; }
+  .table-board__status-rail > div { display: flex; flex-direction: column; min-width: 0; }
 }
 
 @media (max-height: 700px) {

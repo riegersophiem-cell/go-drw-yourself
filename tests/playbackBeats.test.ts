@@ -30,4 +30,11 @@ describe("buildPlaybackBeats", () => {
     expect(playbackBeatText(one, names)).toBe("Bot 2 zieht 1 Karte.");
     expect(many.durationMs).toBe(1350);
   });
+
+  it("distinguishes leaving, removal, and rule elimination", () => {
+    const base = { id: "event", kind: "ELIMINATED" as const, actorPlayerId: "a", durationMs: 1000, resultVersion: 2 };
+    expect(playbackBeatText({ ...base, eliminationReason: "LEFT" }, names)).toBe("Bot 2 hat das Spiel aufgegeben.");
+    expect(playbackBeatText({ ...base, eliminationReason: "REMOVED" }, names)).toBe("Bot 2 wurde aus dem Spiel entfernt.");
+    expect(playbackBeatText({ ...base, eliminationReason: "RULE" }, names)).toBe("Bot 2 ist ausgeschieden.");
+  });
 });

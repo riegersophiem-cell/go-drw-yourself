@@ -3,11 +3,8 @@ import type { CardColor, CardType } from "../../game/types";
 /**
  * The v1 asset drop (see project docs) is the ONLY permitted source for how
  * a card looks — every colored/wild front and the card back are complete,
- * final designs (logo, symbol, name, subtitle, and a small type label all
- * baked into the artwork itself). This module is the single place that maps
- * a `CardDefinition` to its file and to the plain-language name/subtitle the
- * art displays, for use in accessible names — nothing here may invent a
- * fourth name for a card; `displayName` must always match the artwork.
+ * final designs. Geometry cards deliberately show symbols only; their
+ * plain-language names remain here solely for accessible labels.
  */
 export interface CardArtEntry {
   file: string;

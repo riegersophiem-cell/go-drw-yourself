@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { advancePlayback, pacedDuration, skipPlayback, startPlayback } from "../src/multiplayer/playbackMachine";
+import { advancePlayback, pacedDuration, playbackDuration, skipPlayback, startPlayback } from "../src/multiplayer/playbackMachine";
 
 describe("playbackMachine", () => {
   it("starts, advances and settles deterministically", () => {
@@ -15,5 +15,11 @@ describe("playbackMachine", () => {
     expect(pacedDuration(1000, 3, 0, false)).toBe(850);
     expect(pacedDuration(1000, 3, 9000, false)).toBe(510);
     expect(pacedDuration(1000, 0, 0, true)).toBe(180);
+  });
+
+  it("keeps every bot action readable for three seconds", () => {
+    expect(playbackDuration(850, 8, 12000, false, true)).toBe(3000);
+    expect(playbackDuration(850, 0, 0, true, true)).toBe(3000);
+    expect(playbackDuration(850, 0, 0, false, false)).toBe(850);
   });
 });

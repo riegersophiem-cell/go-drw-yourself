@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { GameEventBatch } from "../game/gameEvents";
 import { buildPlaybackBeats, type PlaybackBeat } from "../multiplayer/playbackBeats";
-import { pacedDuration } from "../multiplayer/playbackMachine";
+import { playbackDuration } from "../multiplayer/playbackMachine";
 
 interface ActiveBatch { batchId: string; gameId: string; beats: PlaybackBeat[]; }
 
@@ -10,9 +10,12 @@ export function useTurnPlayback(params: {
   gameId: string | null;
   acknowledgeBatch: (batchId: string) => void;
   clearQueue: () => void;
+  botPlayerIds?: string[];
 }) {
-  const { queue, gameId, acknowledgeBatch, clearQueue } = params;
+  const { queue, gameId, acknowledgeBatch, clearQueue, botPlayerIds = [] } = params;
   const [active, setActive] = useState<ActiveBatch | null>(null);
+  const [lastBeat, setLastBeat] = useState<PlaybackBeat | null>(null);
+  const [lastCounter, setLastCounter] = useState({ position: 0, total: 0 });
   const [beatIndex, setBeatIndex] = useState(0);
   const [skipReady, setSkipReady] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
@@ -23,6 +26,23 @@ export function useTurnPlayback(params: {
   const timerDeadline = useRef(0);
   const remainingDuration = useRef<number | null>(null);
   const scheduledBeatId = useRef<string | null>(null);
+  const lastGameId = useRef<string | null>(gameId);
+  const botPlayerKey = [...botPlayerIds].sort().join("|");
+  const botPlayers = useMemo(() => new Set(botPlayerKey ? botPlayerKey.split("|") : []), [botPlayerKey]);
+
+  useEffect(() => {
+    if (gameId && lastGameId.current && lastGameId.current !== gameId) {
+      generation.current += 1;
+      // A new round never inherits narration from the previous one.
+      // oxlint-disable-next-line react/set-state-in-effect
+      setLastBeat(null);
+      // oxlint-disable-next-line react/set-state-in-effect
+      setLastCounter({ position: 0, total: 0 });
+      // oxlint-disable-next-line react/set-state-in-effect
+      setActive(null);
+    }
+    if (gameId) lastGameId.current = gameId;
+  }, [gameId]);
 
   useEffect(() => {
     const query = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -79,7 +99,7 @@ export function useTurnPlayback(params: {
     if (scheduledBeatId.current !== beat.id) {
       scheduledBeatId.current = beat.id;
       const elapsed = performance.now() - chainStartedAt.current;
-      const duration = pacedDuration(beat.durationMs, beatIndex, elapsed, reducedMotion);
+      const duration = playbackDuration(beat.durationMs, beatIndex, elapsed, reducedMotion, !!beat.actorPlayerId && botPlayers.has(beat.actorPlayerId));
       remainingDuration.current = duration + (beatIndex + 1 >= active.beats.length && !reducedMotion ? 120 : 0);
     }
     if (paused) return;
@@ -88,6 +108,8 @@ export function useTurnPlayback(params: {
     timerDeadline.current = performance.now() + delay;
     const timer = window.setTimeout(() => {
       if (generation.current !== currentGeneration) return;
+      setLastBeat(beat);
+      setLastCounter({ position: beatIndex + 1, total: active.beats.length });
       remainingDuration.current = null;
       scheduledBeatId.current = null;
       if (!isLast) setBeatIndex((index) => index + 1);
@@ -98,9 +120,12 @@ export function useTurnPlayback(params: {
       }
     }, delay);
     return () => window.clearTimeout(timer);
-  }, [active, beatIndex, acknowledgeBatch, paused, reducedMotion]);
+  }, [active, beatIndex, acknowledgeBatch, botPlayers, paused, reducedMotion]);
 
   const skip = useCallback(() => {
+    const queuedBeats = queue.flatMap(buildPlaybackBeats);
+    const skippedBeats = queuedBeats.length ? queuedBeats : (active?.beats ?? []);
+    const finalBeat = skippedBeats.at(-1) ?? null;
     generation.current += 1;
     remainingDuration.current = null;
     scheduledBeatId.current = null;
@@ -108,6 +133,10 @@ export function useTurnPlayback(params: {
     clearQueue();
     setActive(null);
     setBeatIndex(0);
+    if (finalBeat) {
+      setLastBeat(finalBeat);
+      setLastCounter({ position: skippedBeats.length, total: skippedBeats.length });
+    }
     // skip() is also how the >2s-hidden auto-skip resolves (called while
     // paused is still true from the visibilitychange handler) - without this,
     // the NEXT batch starts already "paused" and its beat-advance effect bails
@@ -115,7 +144,7 @@ export function useTurnPlayback(params: {
     // Confirmed live: after one long-hide auto-skip, a later chain got stuck
     // permanently on its first beat until Escape/skip was pressed manually.
     setPaused(false);
-  }, [clearQueue]);
+  }, [active, clearQueue, queue]);
 
   useEffect(() => {
     const onVisibility = () => {
@@ -152,9 +181,10 @@ export function useTurnPlayback(params: {
   const queuedBeatCount = useMemo(() => queue.reduce((count, batch) => count + buildPlaybackBeats(batch).length, 0), [queue]);
   return {
     activeBeat: active?.beats[beatIndex] ?? null,
+    visibleBeat: active?.beats[beatIndex] ?? lastBeat,
     isPlaying: active !== null,
-    position: active ? beatIndex + 1 : 0,
-    total: active?.beats.length ?? 0,
+    position: active ? beatIndex + 1 : lastCounter.position,
+    total: active?.beats.length ?? lastCounter.total,
     canSkip: active !== null && queuedBeatCount >= 2 && skipReady,
     reducedMotion,
     skip,

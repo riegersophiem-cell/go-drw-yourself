@@ -10,7 +10,7 @@ export interface AuthedDevice {
 
 /** Verifies a device's session token server-side. Never trust a client-supplied deviceId/playerId without this. */
 export async function authenticateDevice(admin: SupabaseClient, deviceId: string, sessionToken: string): Promise<AuthedDevice> {
-  const { data: device, error } = await admin.from("devices").select("*").eq("device_id", deviceId).single();
+  const { data: device, error } = await admin.from("devices").select("*").eq("device_id", deviceId).eq("connected", true).single();
   if (error || !device) throw new Error("UNKNOWN_DEVICE");
 
   const hash = await sha256Hex(sessionToken);

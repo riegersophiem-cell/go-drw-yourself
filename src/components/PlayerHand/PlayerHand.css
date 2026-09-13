@@ -1,19 +1,26 @@
 .player-hand {
   display: flex;
-  justify-content: center;
+  justify-content: flex-start;
   overflow-x: auto;
   overflow-y: visible;
   /* Bottom padding must clear the fanned cards' rotate+translateY visual
      extent (see FAN_BOTTOM_RESERVE_PX in PlayerHand.tsx) plus the device
      safe area, or an ancestor's overflow:hidden clips the outer cards. */
-  padding: 22px 16px calc(var(--fan-bottom-reserve, 48px) + env(safe-area-inset-bottom));
+  padding: 22px 0 calc(var(--fan-bottom-reserve, 48px) + env(safe-area-inset-bottom));
   scrollbar-width: none;
+  overscroll-behavior-inline: contain;
+  -webkit-overflow-scrolling: touch;
+  scroll-padding-inline: 42px;
 }
 
 .player-hand__fan {
   display: flex;
   align-items: flex-end;
-  padding: 0 20px;
+  justify-content: center;
+  width: max-content;
+  min-width: 100%;
+  box-sizing: border-box;
+  padding-inline: max(42px, 11vw);
 }
 
 .player-hand__slot {
@@ -49,4 +56,9 @@
 
 @media (prefers-reduced-motion: reduce) {
   .player-hand__slot { animation: none; }
+}
+
+@media (max-width: 420px) {
+  .player-hand__fan { padding-inline: 54px; }
+  .player-hand__slot { margin-right: -28px; }
 }

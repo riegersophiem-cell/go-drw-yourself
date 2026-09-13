@@ -206,6 +206,18 @@ export function replaceWithBot(deviceId: string, sessionToken: string, targetPla
   return invoke<MutationBatchResult>("replace-with-bot", { deviceId, sessionToken, targetPlayerId, ...context });
 }
 
+export function removePlayer(deviceId: string, sessionToken: string, targetPlayerId: string, context: MutationContext) {
+  return invoke<MutationBatchResult | { ok: true; roomDeleted?: boolean; newHostDeviceId?: string | null }>("depart-player", {
+    deviceId, sessionToken, mode: "REMOVE", targetPlayerId, ...context,
+  });
+}
+
+export function leaveRoom(deviceId: string, sessionToken: string, context: MutationContext) {
+  return invoke<MutationBatchResult | { ok: true; roomDeleted?: boolean; newHostDeviceId?: string | null }>("depart-player", {
+    deviceId, sessionToken, mode: "LEAVE", ...context,
+  });
+}
+
 export async function fetchPrivateState(deviceId: string, sessionToken: string): Promise<PrivatePlayerState | null> {
   const { data, error } = await supabase.rpc("get_private_state", { p_device_id: deviceId, p_session_token: sessionToken });
   if (error) throw error;

@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { usePendingAction } from "../hooks/usePendingAction";
-import { addBot, removeBot, startGame } from "../multiplayer/api";
-import type { DeviceSession } from "../multiplayer/session";
+import { addBot, leaveRoom, removePlayer, startGame } from "../multiplayer/api";
+import { clearSession, type DeviceSession } from "../multiplayer/session";
 import { useRoomRealtime } from "../hooks/useRoomRealtime";
-import { supabase } from "../supabase/client";
 import { AVATAR_IMAGE } from "../game/avatarImages";
+import { useIsRoomHost } from "../hooks/useIsRoomHost";
 
 export interface LobbyProps {
   session: DeviceSession;
@@ -20,20 +21,13 @@ export interface LobbyProps {
 }
 
 export function Lobby({ session, initialIsHost }: LobbyProps) {
+  const navigate = useNavigate();
   const { players } = useRoomRealtime(session.roomId);
-  const [isHost, setIsHost] = useState(initialIsHost ?? false);
+  const liveIsHost = useIsRoomHost(session);
+  const isHost = initialIsHost === true || liveIsHost;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const pendingStart = usePendingAction<{ type: "START_GAME" }>();
-
-  useEffect(() => {
-    supabase
-      .from("rooms")
-      .select("host_device_id")
-      .eq("room_id", session.roomId)
-      .single()
-      .then(({ data }) => setIsHost(data?.host_device_id === session.deviceId));
-  }, [session.roomId, session.deviceId]);
 
   async function handleAddBot() {
     setBusy(true);
@@ -47,16 +41,29 @@ export function Lobby({ session, initialIsHost }: LobbyProps) {
     }
   }
 
-  async function handleRemoveBot(botPlayerId: string) {
+  async function handleRemovePlayer(playerId: string) {
+    const player = players.find((candidate) => candidate.player_id === playerId);
+    if (!player || !window.confirm(`${player.display_name} wirklich aus dem Raum entfernen?`)) return;
     setBusy(true);
     setError(null);
     try {
-      await removeBot(session.deviceId, session.sessionToken, botPlayerId);
+      await removePlayer(session.deviceId, session.sessionToken, playerId, { actionId: crypto.randomUUID(), expectedGameId: null, expectedVersion: null });
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setBusy(false);
     }
+  }
+
+  async function handleLeave() {
+    if (!window.confirm(isHost ? "Raum wirklich verlassen? Die Hostrolle geht an den nächsten Spieler." : "Raum wirklich verlassen?")) return;
+    setBusy(true); setError(null);
+    try {
+      await leaveRoom(session.deviceId, session.sessionToken, { actionId: crypto.randomUUID(), expectedGameId: null, expectedVersion: null });
+      clearSession();
+      navigate("/");
+    } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
+    finally { setBusy(false); }
   }
 
   async function handleStart(retry = false) {
@@ -100,12 +107,11 @@ export function Lobby({ session, initialIsHost }: LobbyProps) {
                   ) : (
                     "getrennt"
                   )
-                ) : isHost ? (
-                  <button className="lobby-player-list__remove" onClick={() => handleRemoveBot(p.player_id)} disabled={busy}>
+                ) : "Bot"}
+                {isHost && p.player_id !== session.playerId && (
+                  <button className="lobby-player-list__remove" onClick={() => handleRemovePlayer(p.player_id)} disabled={busy}>
                     Entfernen
                   </button>
-                ) : (
-                  "Bot"
                 )}
               </span>
             </li>
@@ -137,6 +143,7 @@ export function Lobby({ session, initialIsHost }: LobbyProps) {
           </>
         )}
         {!isHost && <p className="field-label">Warte, bis der Host das Spiel startet…</p>}
+        <button className="btn btn--secondary" onClick={() => void handleLeave()} disabled={busy}>Raum verlassen</button>
       </div>
     </div>
   );

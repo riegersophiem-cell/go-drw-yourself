@@ -22,3 +22,8 @@ export function pacedDuration(baseMs: number, beatIndex: number, elapsedMs: numb
   const longFactor = elapsedMs >= 9000 ? 0.6 : 1;
   return Math.max(180, Math.round(baseMs * chainFactor * longFactor));
 }
+
+/** Bots stay readable for a full three seconds; motion reduction changes animation, not reading time. */
+export function playbackDuration(baseMs: number, beatIndex: number, elapsedMs: number, reducedMotion: boolean, isBot: boolean): number {
+  return isBot ? 3000 : pacedDuration(baseMs, beatIndex, elapsedMs, reducedMotion);
+}

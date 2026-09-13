@@ -9,11 +9,6 @@
 <rect x="27" y="27" width="696" height="996" rx="50" fill="url(#bg)" stroke="rgba(255,255,255,.92)" stroke-width="12"/>
 
 <ellipse cx="530" cy="235" rx="300" ry="245" fill="url(#flare)" transform="rotate(-25 530 235)"/>
-<text x="72" y="112" fill="#FFFFFF" font-family="Impact,Arial Black,sans-serif" font-size="52" letter-spacing="3">GO DR*W YOURSELF</text>
 <g transform="translate(125 205)" fill="white" stroke="white" stroke-linecap="round" stroke-linejoin="round" ><rect x="95" y="70" width="310" height="310" rx="28" /></g>
-<text x="375" y="790" text-anchor="middle" fill="white" font-family="Impact,Arial Black,sans-serif" font-size="88" letter-spacing="3">LINK</text>
-<line x1="160" y1="830" x2="590" y2="830" stroke="white" stroke-opacity=".55" stroke-width="4"/>
-<text x="375" y="884" text-anchor="middle" fill="white" fill-opacity=".88" font-family="Arial,sans-serif" font-size="27" font-weight="700" letter-spacing="2">HOLD THE LINE</text>
-<text x="72" y="974" fill="white" fill-opacity=".62" font-family="Arial,sans-serif" font-size="22" font-weight="700">SQUARE</text>
 <circle cx="674" cy="952" r="18" fill="none" stroke="white" stroke-opacity=".7" stroke-width="4"/><path d="M666 952h16M674 944v16" stroke="white" stroke-opacity=".7" stroke-width="4"/>
 </svg>

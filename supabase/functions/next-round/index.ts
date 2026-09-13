@@ -10,7 +10,7 @@ Deno.serve(async(req)=>{ if(req.method==="OPTIONS") return new Response("ok",{he
     const {data:room}=await admin.from("rooms").select("*").eq("room_id",device.roomId).single();
     if(room.host_device_id!==device.deviceId) return errorResponse("NOT_HOST","Nur der Host kann die nächste Runde starten.",403);
     if(room.status!=="FINISHED") return errorResponse("ROUND_NOT_FINISHED","Die aktuelle Runde läuft noch.",409);
-    const {data:players,error}=await admin.from("players").select("*").eq("room_id",device.roomId).order("seat_index",{ascending:true}); if(error) throw error;
+    const {data:players,error}=await admin.from("players").select("*").eq("room_id",device.roomId).eq("connected",true).order("seat_index",{ascending:true}); if(error) throw error;
     if(!players||players.length<2) return errorResponse("NOT_ENOUGH_PLAYERS","Mindestens 2 Spieler nötig.",400);
     const specs:NewPlayerSpec[]=players.map((p)=>({playerId:p.player_id,displayName:p.display_name,type:p.player_type,avatar:p.avatar??undefined,botStrategyLevel:p.bot_strategy_level??undefined}));
     let state=createNewGame(device.roomId,specs); const botResult=await runBotTurnsUntilHumanOrOver(admin,state); state=botResult.state; const roomStatus=state.phase==="GAME_OVER"?"FINISHED":"PLAYING";

@@ -43,6 +43,16 @@
   .uno-card--hero { width: 108px; }
 }
 
+@media (max-width: 420px) {
+  .uno-card--table { width: 50px; }
+  .uno-card--hero { width: 96px; }
+}
+
+@media (max-width: 320px) {
+  .uno-card--table { width: 46px; }
+  .uno-card--hero { width: 88px; }
+}
+
 .uno-card__art {
   display: block;
   width: 100%;

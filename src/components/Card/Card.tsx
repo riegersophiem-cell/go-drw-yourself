@@ -2,6 +2,8 @@ import type { CardDefinition } from "../../game/types";
 import { cardArtUrl, cardBackUrl, getCardArt } from "./cardArt";
 import "./Card.css";
 
+const GEOMETRY_TYPES = new Set(["TRIANGLE", "SQUARE", "CIRCLE", "DIAMOND", "SEMICIRCLE"]);
+
 export interface CardProps {
   def: CardDefinition;
   playable?: boolean;
@@ -23,9 +25,6 @@ export function Card({ def, playable = true, selected = false, faceDown = false,
   }
 
   const art = getCardArt(def.color, def.type);
-  // The artwork itself already spells out color, name, and subtitle in
-  // plain language — see cardArt.ts — so the accessible name just restates
-  // exactly that text rather than inventing a separate description.
   const accessibleName = `${def.color !== "WILD" ? def.color + " " : ""}${art.displayName} – ${art.subtitle}`;
 
   if (display) {
@@ -42,7 +41,7 @@ export function Card({ def, playable = true, selected = false, faceDown = false,
       aria-label={accessibleName}
     >
       <img className="uno-card__art" src={cardArtUrl(def.color, def.type)} alt="" />
-      {selected && (
+      {selected && !GEOMETRY_TYPES.has(def.type) && (
         <span className="uno-card__caption" aria-hidden="true">
           <strong>{def.color !== "WILD" ? def.color + " · " : ""}{art.displayName}</strong>
           <small>{art.subtitle}</small>

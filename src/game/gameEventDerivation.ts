@@ -17,7 +17,7 @@ function terminalEvents(before: GameState, after: GameState): UnsequencedEvent[]
   const result: UnsequencedEvent[] = [];
   for (const player of after.players) {
     const wasEliminated = before.players.find((candidate) => candidate.playerId === player.playerId)?.eliminated ?? false;
-    if (!wasEliminated && player.eliminated) result.push(event("PLAYER_ELIMINATED", player.playerId, { playerId: player.playerId }, after.version));
+    if (!wasEliminated && player.eliminated) result.push(event("PLAYER_ELIMINATED", player.playerId, { playerId: player.playerId, reason: "RULE" }, after.version));
   }
   if (before.phase !== "GAME_OVER" && after.phase === "GAME_OVER" && after.winnerPlayerId) {
     result.push(event("GAME_OVER", after.winnerPlayerId, { winnerPlayerId: after.winnerPlayerId }, after.version));

@@ -19,7 +19,7 @@ export interface PersistTurnBatchOptions {
 
 export async function persistTurnBatch(admin: SupabaseClient, state: GameState, options: PersistTurnBatchOptions) {
   const publicView = toPublicGameState(state, options.roomStatus);
-  const privateViews = state.players.filter((p) => p.type === "HUMAN").map((p) => ({
+  const privateViews = state.players.filter((p) => p.type === "HUMAN" && !p.eliminated && p.connected).map((p) => ({
     player_id: p.playerId,
     view: buildPrivatePlayerState(state, p.playerId),
   }));

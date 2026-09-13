@@ -12,6 +12,7 @@ export interface PlaybackBeat {
   chosenColor?: Exclude<CardColor, "WILD">;
   count?: number;
   totalAmount?: number;
+  eliminationReason?: "RULE" | "LEFT" | "REMOVED";
   durationMs: number;
   resultVersion: number;
 }
@@ -73,7 +74,7 @@ export function buildPlaybackBeats(batch: GameEventBatch): PlaybackBeat[] {
         beats.push(make(batch, event, "EXTRA", { card: { color: event.payload.color, type: event.payload.cardType } }));
         break;
       case "PLAYER_ELIMINATED":
-        beats.push(make(batch, event, "ELIMINATED", { actorPlayerId: event.payload.playerId }));
+        beats.push(make(batch, event, "ELIMINATED", { actorPlayerId: event.payload.playerId, eliminationReason: event.payload.reason }));
         break;
       case "GAME_OVER":
         beats.push(make(batch, event, "GAME_OVER", { actorPlayerId: event.payload.winnerPlayerId }));
@@ -109,7 +110,7 @@ export function playbackBeatText(beat: PlaybackBeat, playerName: (id: string | n
     case "SKIP": return `${actor} setzt ${target} aus.`;
     case "STACK": return `${actor} stapelt +${beat.count ?? 0}. Gesamt: +${beat.totalAmount ?? 0}.`;
     case "EXTRA": return `${actor} wirft zusätzlich ${card} ab.`;
-    case "ELIMINATED": return `${actor} ist ausgeschieden.`;
+    case "ELIMINATED": return beat.eliminationReason === "LEFT" ? `${actor} hat das Spiel aufgegeben.` : beat.eliminationReason === "REMOVED" ? `${actor} wurde aus dem Spiel entfernt.` : `${actor} ist ausgeschieden.`;
     case "GAME_OVER": return `${actor} gewinnt die Runde.`;
   }
 }

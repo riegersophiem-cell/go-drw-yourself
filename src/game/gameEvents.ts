@@ -25,7 +25,7 @@ export interface EventPayloadByType {
   HANDS_SWAPPED: { playerAId: string; playerBId: string };
   DRAW_STACK_INCREASED: { playerId: string; addedAmount: number; totalAmount: number };
   DRAW_STACK_RESOLVED: { playerId: string; amount: number };
-  PLAYER_ELIMINATED: { playerId: string };
+  PLAYER_ELIMINATED: { playerId: string; reason?: "RULE" | "LEFT" | "REMOVED" };
   GAME_OVER: { winnerPlayerId: string };
 }
 
@@ -75,6 +75,13 @@ function cardTypeField(payload: Record<string, unknown>, key: string): CardType 
   return value;
 }
 
+function eliminationReason(payload: Record<string, unknown>): "RULE" | "LEFT" | "REMOVED" | undefined {
+  const value = payload.reason;
+  if (value === undefined) return undefined;
+  if (value !== "RULE" && value !== "LEFT" && value !== "REMOVED") throw new Error("INVALID_EVENT_PAYLOAD:reason");
+  return value;
+}
+
 /** Returns a newly allocated, whitelisted payload. Unknown keys are never copied. */
 export function sanitizeEventPayload<T extends GameEventType>(type: T, raw: unknown): EventPayloadByType[T] {
   const p = objectPayload(raw);
@@ -90,7 +97,11 @@ export function sanitizeEventPayload<T extends GameEventType>(type: T, raw: unkn
     case "HANDS_SWAPPED": result = { playerAId: stringField(p, "playerAId"), playerBId: stringField(p, "playerBId") }; break;
     case "DRAW_STACK_INCREASED": result = { playerId: stringField(p, "playerId"), addedAmount: integerField(p, "addedAmount", 1), totalAmount: integerField(p, "totalAmount", 1) }; break;
     case "DRAW_STACK_RESOLVED": result = { playerId: stringField(p, "playerId"), amount: integerField(p, "amount", 1) }; break;
-    case "PLAYER_ELIMINATED": result = { playerId: stringField(p, "playerId") }; break;
+    case "PLAYER_ELIMINATED": {
+      const reason = eliminationReason(p);
+      result = { playerId: stringField(p, "playerId"), ...(reason ? { reason } : {}) };
+      break;
+    }
     case "GAME_OVER": result = { winnerPlayerId: stringField(p, "winnerPlayerId") }; break;
     default: throw new Error("UNKNOWN_EVENT_TYPE");
   }
