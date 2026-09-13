@@ -80,13 +80,13 @@
   z-index: 2;
   display: grid;
   place-items: center;
-  width: 64px;
-  height: 64px;
+  width: 82px;
+  height: 82px;
   /* Bigger than its 48px grid column and the badge's own box, pulled up and
      left with negative margins so the figure visibly overlaps the badge's
      top-left edge instead of sitting neatly inside it - only into the
      badge's own border/background, never rightward into the name column. */
-  margin: -16px 0 -16px -18px;
+  margin: -30px 0 -30px -22px;
   color: #fff;
   font-size: 1rem;
   font-weight: 900;
@@ -399,7 +399,7 @@
 .table-board__player--crowded .table-board__avatar {
   width: 32px;
   height: 32px;
-  margin: -8px 0 -8px -9px;
+  margin: -12px 0 -12px -9px;
   font-size: .8rem;
 }
 .table-board__player--crowded .table-board__player-name { font-size: .72rem; }
@@ -429,7 +429,7 @@
   .table-board__avatar {
     width: 32px;
     height: 32px;
-    margin: -8px 0 -8px -9px;
+    margin: -12px 0 -12px -9px;
     font-size: .72rem;
   }
   .table-board__avatar--bot { font-size: 1rem; }
@@ -514,7 +514,7 @@
   .table-board__player--side .table-board__avatar {
     width: 26px;
     height: 26px;
-    margin: -6px 0 -6px -7px;
+    margin: -10px 0 -10px -7px;
   }
 
   /* The default (inherited) line-height nearly doubles the two-line "BOT · 7
