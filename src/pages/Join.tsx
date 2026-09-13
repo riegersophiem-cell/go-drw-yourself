@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { joinRoom } from "../multiplayer/api";
 import { saveSession } from "../multiplayer/session";
+import { AvatarPicker } from "../components/AvatarPicker/AvatarPicker";
+import { DEFAULT_HUMAN_AVATAR } from "../game/avatars";
 import type { DeviceRole } from "../game/types";
 import type { RoomNavState } from "./RoomPage";
 
@@ -15,6 +17,7 @@ export function Join() {
   const params = useParams();
   const [roomCode, setRoomCode] = useState(params.code?.toUpperCase() ?? "");
   const [name, setName] = useState("");
+  const [avatar, setAvatar] = useState(DEFAULT_HUMAN_AVATAR);
   const [role, setRole] = useState<DeviceRole | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -28,7 +31,7 @@ export function Join() {
     setBusy(true);
     setError(null);
     try {
-      const result = await joinRoom(roomCode.trim().toUpperCase(), role, name.trim() || undefined);
+      const result = await joinRoom(roomCode.trim().toUpperCase(), role, name.trim() || undefined, role === "PLAYER" ? avatar : undefined);
       saveSession({
         roomId: result.roomId,
         roomCode: result.roomCode,
@@ -73,6 +76,8 @@ export function Join() {
               Dein Name
             </label>
             <input id="name" className="text-input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Max" maxLength={24} />
+            <p className="field-label">Dein Avatar</p>
+            <AvatarPicker value={avatar} onChange={setAvatar} />
           </>
         )}
 

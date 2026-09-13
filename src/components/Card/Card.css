@@ -57,8 +57,46 @@
 }
 
 .uno-card--selected {
-  transform: translateY(-14px);
+  transform: translateY(-30px) scale(1.35);
+  transform-origin: 50% 100%;
   outline: 3px solid #fff;
+}
+
+/*
+ * A visible callout, not just the accessible name in `title`/`aria-label`:
+ * at hand-card size the artwork's own baked-in name/subtitle text is too
+ * small to read comfortably, so the selected card repeats it here, large
+ * and guaranteed on top (own stacking context via the enlarged card's
+ * z-index, positioned absolutely so it never affects hand layout).
+ */
+.uno-card__caption {
+  position: absolute;
+  z-index: 5;
+  left: 50%;
+  top: -8px;
+  transform: translate(-50%, -100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  white-space: nowrap;
+  background: rgba(12, 25, 42, 0.96);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+}
+
+.uno-card__caption strong {
+  color: #ffe16a;
+  font-size: 0.85rem;
+  letter-spacing: 0.02em;
+}
+
+.uno-card__caption small {
+  color: #eaf1fa;
+  font-size: 0.62rem;
+  letter-spacing: 0.03em;
 }
 
 /*

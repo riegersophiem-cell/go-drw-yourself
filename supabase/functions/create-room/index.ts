@@ -1,12 +1,14 @@
 import { generateRoomCode, generateSessionToken, sha256Hex } from "../_shared/persist.ts";
 import { corsHeaders, errorResponse, jsonResponse, supabaseAdmin } from "../_shared/supabaseAdmin.ts";
+import { DEFAULT_HUMAN_AVATAR, isHumanAvatarId } from "../../../src/game/avatars.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders() });
 
   try {
-    const { displayName } = await req.json();
+    const { displayName, avatar } = await req.json();
     if (!displayName || typeof displayName !== "string") return errorResponse("INVALID_INPUT", "displayName required");
+    const playerAvatar = isHumanAvatarId(avatar) ? avatar : DEFAULT_HUMAN_AVATAR;
 
     const admin = supabaseAdmin();
 
@@ -27,7 +29,7 @@ Deno.serve(async (req) => {
 
     const { data: player, error: playerError } = await admin
       .from("players")
-      .insert({ room_id: room.room_id, display_name: displayName, player_type: "HUMAN", seat_index: 0 })
+      .insert({ room_id: room.room_id, display_name: displayName, player_type: "HUMAN", seat_index: 0, avatar: playerAvatar })
       .select()
       .single();
     if (playerError) throw playerError;

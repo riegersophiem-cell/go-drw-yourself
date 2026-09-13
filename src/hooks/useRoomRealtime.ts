@@ -4,11 +4,13 @@ import { supabase } from "../supabase/client";
 import type { PrivatePlayerState, PublicGameState } from "../game/types";
 import { reconcileBroadcastPayload, type KnownRoundState } from "../multiplayer/batchReconciliation";
 import { useEventPresentation } from "./useEventPresentation";
+import type { AvatarId } from "../game/avatars";
 
 export interface RoomPlayerRow {
   player_id: string;
   display_name: string;
   player_type: "HUMAN" | "BOT";
+  avatar: AvatarId;
   seat_index: number;
   eliminated: boolean;
   connected: boolean;
@@ -100,6 +102,8 @@ export function useRoomRealtime(roomId: string | null, device?: { deviceId: stri
     privateState,
     players,
     presentationQueue: presentation.queue,
+    acknowledgePresentationBatch: presentation.acknowledgeBatch,
+    clearPresentationQueue: presentation.resetQueue,
     refetch: () => roomId && refetchAll(roomId),
   };
 }

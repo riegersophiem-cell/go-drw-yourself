@@ -1,4 +1,4 @@
-import type { CardColor, CardType } from "./types";
+import type { CardColor, CardType } from "./types.ts";
 
 export type GameEventType =
   | "DRAW"

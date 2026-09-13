@@ -4,6 +4,7 @@ import { addBot, removeBot, startGame } from "../multiplayer/api";
 import type { DeviceSession } from "../multiplayer/session";
 import { useRoomRealtime } from "../hooks/useRoomRealtime";
 import { supabase } from "../supabase/client";
+import { AVATAR_IMAGE } from "../game/avatarImages";
 
 export interface LobbyProps {
   session: DeviceSession;
@@ -88,7 +89,10 @@ export function Lobby({ session, initialIsHost }: LobbyProps) {
         <ul className="lobby-player-list">
           {players.map((p) => (
             <li key={p.player_id}>
-              {p.player_type === "BOT" ? "🤖" : "👤"} {p.display_name}
+              <span className="lobby-player-list__identity">
+                {AVATAR_IMAGE[p.avatar] ? <img className="lobby-player-list__avatar" src={AVATAR_IMAGE[p.avatar]} alt="" /> : "👤"}
+                {p.display_name}
+              </span>
               <span className="lobby-player-list__status">
                 {p.player_type === "HUMAN" ? (
                   p.connected ? (

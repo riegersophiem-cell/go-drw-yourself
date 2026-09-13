@@ -1,7 +1,7 @@
-import type { GameAction } from "./actions";
-import { definitionOfInstance, getHandOfPlayer } from "./gameState";
-import { sanitizeEventPayload, type GameEventType, type PendingGameEvent } from "./gameEvents";
-import type { GameState } from "./types";
+import type { GameAction } from "./actions.ts";
+import { definitionOfInstance, getHandOfPlayer } from "./gameState.ts";
+import { sanitizeEventPayload, type GameEventType, type PendingGameEvent } from "./gameEvents.ts";
+import type { GameState } from "./types.ts";
 
 type UnsequencedEvent = Omit<PendingGameEvent, "sequence">;
 

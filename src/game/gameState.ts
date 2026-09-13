@@ -1,5 +1,6 @@
 import { buildStandardDeck, isWildDefinition } from "./cards.ts";
 import { instantiateDeck, shuffle } from "./deck.ts";
+import { DEFAULT_HUMAN_AVATAR, type AvatarId } from "./avatars.ts";
 import {
   DEFAULT_RULESET,
   PLAIN_SYMBOL_TYPES,
@@ -23,6 +24,7 @@ export interface NewPlayerSpec {
   playerId: string;
   displayName: string;
   type: PlayerType;
+  avatar?: AvatarId;
   botStrategyLevel?: "EASY" | "NORMAL";
 }
 
@@ -61,6 +63,7 @@ export function createNewGame(
       playerId: spec.playerId,
       displayName: spec.displayName,
       type: spec.type,
+      avatar: spec.avatar ?? DEFAULT_HUMAN_AVATAR,
       seatIndex,
       currentHandId: handId,
       connected: true,
@@ -139,6 +142,7 @@ export function toPublicPlayerView(state: GameState, player: Player): PublicPlay
     playerId: player.playerId,
     displayName: player.displayName,
     type: player.type,
+    avatar: player.avatar,
     seatIndex: player.seatIndex,
     cardCount: state.hands[player.currentHandId].cardInstanceIds.length,
     connected: player.connected,

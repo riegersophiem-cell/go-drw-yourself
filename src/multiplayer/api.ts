@@ -4,6 +4,7 @@ import { supabase } from "../supabase/client";
 import type { GameAction } from "../game/actions";
 import type { GameEventBatch } from "../game/gameEvents";
 import type { CardColor, DeviceRole, PrivatePlayerState, PublicGameState } from "../game/types";
+import type { HumanAvatarId } from "../game/avatars";
 
 export const NETWORK_ERROR_MESSAGE = "Verbindung zum Spiel fehlgeschlagen. Bitte versuche es erneut.";
 export const GENERIC_ERROR_MESSAGE = "Ein unerwarteter Fehler ist aufgetreten. Bitte versuche es erneut.";
@@ -134,8 +135,8 @@ export interface CreateRoomResult {
   playerId: string;
 }
 
-export function createRoom(displayName: string) {
-  return invoke<CreateRoomResult>("create-room", { displayName });
+export function createRoom(displayName: string, avatar: HumanAvatarId) {
+  return invoke<CreateRoomResult>("create-room", { displayName, avatar });
 }
 
 export interface JoinRoomResult {
@@ -147,8 +148,8 @@ export interface JoinRoomResult {
   role: DeviceRole;
 }
 
-export function joinRoom(roomCode: string, role: DeviceRole, displayName?: string) {
-  return invoke<JoinRoomResult>("join-room", { roomCode, role, displayName });
+export function joinRoom(roomCode: string, role: DeviceRole, displayName?: string, avatar?: HumanAvatarId) {
+  return invoke<JoinRoomResult>("join-room", { roomCode, role, displayName, avatar });
 }
 
 export function addBot(deviceId: string, sessionToken: string, displayName?: string, strategyLevel: "EASY" | "NORMAL" = "NORMAL") {
@@ -220,7 +221,7 @@ export async function fetchPublicState(roomId: string): Promise<PublicGameState 
 export async function fetchPlayers(roomId: string) {
   const { data, error } = await supabase
     .from("players")
-    .select("player_id, display_name, player_type, seat_index, eliminated, connected, wins")
+    .select("player_id, display_name, player_type, avatar, seat_index, eliminated, connected, wins")
     .eq("room_id", roomId)
     .order("seat_index", { ascending: true });
   if (error) throw error;

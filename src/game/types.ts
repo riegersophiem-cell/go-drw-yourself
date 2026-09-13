@@ -1,6 +1,8 @@
 // Core domain types. Device, Player and Hand are kept as separate entities on purpose:
 // hand ownership must be reassignable (7-swap, 0-rotation) without moving physical cards.
 
+import type { AvatarId } from "./avatars.ts";
+
 export type CardColor = "RED" | "BLUE" | "GREEN" | "YELLOW" | "WILD";
 
 // The former 0-9 number cards carry no visible digits any more (per the
@@ -54,6 +56,7 @@ export interface Player {
   playerId: string;
   displayName: string;
   type: PlayerType;
+  avatar: AvatarId;
   seatIndex: number;
   currentHandId: string;
   connected: boolean;
@@ -135,6 +138,7 @@ export interface PublicPlayerView {
   playerId: string;
   displayName: string;
   type: PlayerType;
+  avatar: AvatarId;
   seatIndex: number;
   cardCount: number;
   connected: boolean;

@@ -12,7 +12,7 @@ Deno.serve(async(req)=>{ if(req.method==="OPTIONS") return new Response("ok",{he
     if(room.status!=="LOBBY") return errorResponse("ROOM_NOT_IN_LOBBY","Das Spiel läuft bereits.",409);
     const {data:players,error}=await admin.from("players").select("*").eq("room_id",device.roomId).order("seat_index",{ascending:true}); if(error) throw error;
     if(!players||players.length<2) return errorResponse("NOT_ENOUGH_PLAYERS","Mindestens 2 Spieler nötig.",400);
-    const specs:NewPlayerSpec[]=players.map((p)=>({playerId:p.player_id,displayName:p.display_name,type:p.player_type,botStrategyLevel:p.bot_strategy_level??undefined}));
+    const specs:NewPlayerSpec[]=players.map((p)=>({playerId:p.player_id,displayName:p.display_name,type:p.player_type,avatar:p.avatar??undefined,botStrategyLevel:p.bot_strategy_level??undefined}));
     let state=createNewGame(device.roomId,specs); const botResult=await runBotTurnsUntilHumanOrOver(admin,state); state=botResult.state; const roomStatus=state.phase==="GAME_OVER"?"FINISHED":"PLAYING";
     const persisted=await persistTurnBatch(admin,state,{transitionMode:"START_GAME",expectedGameId:null,expectedVersion:null,batchFromVersion:0,actionId:context.actionId,roomStatus,winnerPlayerId:state.winnerPlayerId,events:botResult.events});
     return jsonResponse({ok:true,batch:persisted.batch,gameId:state.gameId,version:state.version});

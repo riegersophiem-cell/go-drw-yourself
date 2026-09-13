@@ -2,10 +2,13 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { createRoom } from "../multiplayer/api";
 import { saveSession } from "../multiplayer/session";
+import { AvatarPicker } from "../components/AvatarPicker/AvatarPicker";
+import { DEFAULT_HUMAN_AVATAR } from "../game/avatars";
 import type { RoomNavState } from "./RoomPage";
 
 export function Home() {
   const [name, setName] = useState("");
+  const [avatar, setAvatar] = useState(DEFAULT_HUMAN_AVATAR);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -18,7 +21,7 @@ export function Home() {
     setBusy(true);
     setError(null);
     try {
-      const result = await createRoom(name.trim());
+      const result = await createRoom(name.trim(), avatar);
       saveSession({
         roomId: result.roomId,
         roomCode: result.roomCode,
@@ -51,6 +54,8 @@ export function Home() {
           Dein Name
         </label>
         <input id="name" className="text-input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Sophie" maxLength={24} />
+        <p className="field-label">Dein Avatar</p>
+        <AvatarPicker value={avatar} onChange={setAvatar} />
         {error && <p className="error-text">{error}</p>}
         <button className="btn btn--primary" onClick={handleCreate} disabled={busy}>
           {busy ? "Erstelle Raum…" : "Neues Spiel"}

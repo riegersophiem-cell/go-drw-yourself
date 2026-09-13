@@ -19,5 +19,12 @@ export function useEventPresentation() {
     setQueue([]);
   }, []);
 
-  return { queue, enqueueBatch, resetQueue };
+  const acknowledgeBatch = useCallback((batchId: string) => {
+    setQueue((prev) => {
+      const index = prev.findIndex((batch) => batch.batchId === batchId);
+      return index < 0 ? prev : prev.slice(index + 1);
+    });
+  }, []);
+
+  return { queue, enqueueBatch, resetQueue, acknowledgeBatch };
 }

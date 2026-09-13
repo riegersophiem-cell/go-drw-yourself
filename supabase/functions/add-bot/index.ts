@@ -1,5 +1,6 @@
 import { authenticateDevice } from "../_shared/auth.ts";
 import { corsHeaders, errorResponse, jsonResponse, supabaseAdmin } from "../_shared/supabaseAdmin.ts";
+import { botAvatarForIndex } from "../../../src/game/avatars.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders() });
@@ -21,6 +22,12 @@ Deno.serve(async (req) => {
       .limit(1);
     const nextSeat = seatData && seatData.length > 0 ? seatData[0].seat_index + 1 : 0;
 
+    const { count: existingBotCount } = await admin
+      .from("players")
+      .select("player_id", { count: "exact", head: true })
+      .eq("room_id", device.roomId)
+      .eq("player_type", "BOT");
+
     const { data: bot, error } = await admin
       .from("players")
       .insert({
@@ -28,6 +35,7 @@ Deno.serve(async (req) => {
         display_name: displayName ?? `Bot ${nextSeat + 1}`,
         player_type: "BOT",
         seat_index: nextSeat,
+        avatar: botAvatarForIndex(existingBotCount ?? 0),
         bot_strategy_level: strategyLevel === "EASY" ? "EASY" : "NORMAL",
       })
       .select()

@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import type { PublicGameState, PublicPlayerView } from "../../game/types";
+import { AVATAR_IMAGE } from "../../game/avatarImages";
 import { Card } from "../Card/Card";
+import { TurnPlayback } from "../TurnPlayback/TurnPlayback";
+import type { PlaybackBeat } from "../../multiplayer/playbackBeats";
 import "./Table.css";
 
 const CROWDED_PLAYER_THRESHOLD = 7;
@@ -9,6 +12,7 @@ export interface TableProps {
   publicState: PublicGameState;
   compact?: boolean;
   ownPlayerId?: string;
+  playback?: { beat: PlaybackBeat; position: number; total: number; canSkip: boolean; onSkip: () => void } | null;
 }
 
 /**
@@ -74,7 +78,7 @@ function useHandShufflePulse(publicState: PublicGameState): boolean {
   return pulsing;
 }
 
-export function Table({ publicState, compact = false, ownPlayerId }: TableProps) {
+export function Table({ publicState, compact = false, ownPlayerId, playback }: TableProps) {
   const currentPlayer = publicState.players.find((player) => player.playerId === publicState.currentPlayerId);
   const shufflePulse = useHandShufflePulse(publicState);
   const narrow = typeof window !== "undefined" && window.innerWidth <= 760;
@@ -96,9 +100,9 @@ export function Table({ publicState, compact = false, ownPlayerId }: TableProps)
     const isOwn = player.playerId === ownPlayerId;
     const disconnected = !player.connected && player.type === "HUMAN";
     return (
-      <article key={player.playerId} className={`table-board__player ${crowded ? "table-board__player--crowded" : ""} ${isActive ? "table-board__player--active" : ""} ${isOwn ? "table-board__player--own" : ""} ${!isOwn && seatIndex !== null ? "table-board__player--side" : ""} ${shufflePulse ? "table-board__player--pulse" : ""}`} style={seatIndex === null ? undefined : seatStyle(seatIndex, orderedPlayers.length)} title={`${player.displayName} – ${player.cardCount} Karten`}>
+      <article key={player.playerId} className={`table-board__player ${crowded ? "table-board__player--crowded" : ""} ${isActive ? "table-board__player--active" : ""} ${isOwn ? "table-board__player--own" : ""} ${!isOwn && seatIndex !== null ? "table-board__player--side" : ""} ${shufflePulse ? "table-board__player--pulse" : ""} ${playback?.beat.actorPlayerId === player.playerId ? "table-board__player--playback-actor" : ""} ${playback?.beat.targetPlayerId === player.playerId ? "table-board__player--playback-target" : ""}`} style={seatIndex === null ? undefined : seatStyle(seatIndex, orderedPlayers.length)} title={`${player.displayName} – ${player.cardCount} Karten`}>
         <div className={`table-board__avatar ${player.type === "BOT" ? "table-board__avatar--bot" : ""}`} aria-hidden="true">
-          {player.type === "BOT" ? "🤖" : initials(player.displayName)}
+          {AVATAR_IMAGE[player.avatar] ? <img className="table-board__avatar-img" src={AVATAR_IMAGE[player.avatar]} alt="" /> : initials(player.displayName)}
           <span className={`table-board__presence ${disconnected ? "table-board__presence--offline" : ""}`} />
         </div>
         <div className="table-board__player-copy">
@@ -112,7 +116,7 @@ export function Table({ publicState, compact = false, ownPlayerId }: TableProps)
   }
 
   return (
-    <section className={`table-board ${compact ? "table-board--compact" : ""}`} aria-label="Spieltisch">
+    <section className={`table-board ${compact ? "table-board--compact" : ""} ${playback ? `table-board--playback table-board--playback-${playback.beat.kind.toLowerCase()}` : ""}`} aria-label="Spieltisch">
       <div className="table-board__surface">
         <div className="table-board__rings" aria-hidden="true" />
         {crowded ? <div className="table-board__crowded-seats">{orderedPlayers.map((player) => renderPlayer(player, null))}</div> : orderedPlayers.map((player, index) => renderPlayer(player, index))}
@@ -129,7 +133,7 @@ export function Table({ publicState, compact = false, ownPlayerId }: TableProps)
             <div className="table-board__pile table-board__pile--discard">
               <div className="table-board__hero-halo" />
               <div className="table-board__card-stack table-board__card-stack--hero">
-                {publicState.topDiscard ? <Card def={publicState.topDiscard} size="hero" playable={false} /> : <div className="uno-card uno-card--hero" />}
+                {publicState.topDiscard ? <Card def={publicState.topDiscard} size="hero" display /> : <div className="uno-card uno-card--hero" />}
               </div>
               <strong>Ablagestapel</strong>
               {publicState.activeColor && <span className={`table-board__active-color table-board__active-color--${publicState.activeColor}`} />}
@@ -147,6 +151,7 @@ export function Table({ publicState, compact = false, ownPlayerId }: TableProps)
           </div>
         </div>
       </div>
+      {playback && <TurnPlayback key={playback.beat.id} beat={playback.beat} players={publicState.players} position={playback.position} total={playback.total} canSkip={playback.canSkip} onSkip={playback.onSkip} />}
     </section>
   );
 }

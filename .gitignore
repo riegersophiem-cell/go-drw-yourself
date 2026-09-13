@@ -31,3 +31,7 @@ dist-ssr
 # Local Supabase CLI state (machine-local, may contain local dev secrets)
 supabase/.branches/
 supabase/.temp/
+
+# Raw avatar sprite sheets used once to crop src/assets/avatars/ — not
+# needed at runtime, kept on disk locally for future re-cropping only.
+design/avatars-source/
