@@ -39,7 +39,21 @@ Deno.serve(async (req) => {
       return jsonResponse(data ?? { ok: true });
     }
 
-    if (room.status !== "PLAYING") return errorResponse("ROOM_NOT_PLAYING", "Diese Runde läuft nicht mehr.", 409);
+    if (room.status !== "PLAYING") {
+      // The room can legitimately already be FINISHED because a prior,
+      // successful call to this same action was the one that ended the game
+      // and the client never saw that response (dropped connection, etc).
+      // apply_player_departure/apply_turn_batch already cache by actionId,
+      // but that cache is only reached if we call the RPC at all - without
+      // this check, a retry of the game-ending departure permanently fails
+      // with ROOM_NOT_PLAYING instead of returning the stored result.
+      const actionId = typeof body.actionId === "string" ? body.actionId : null;
+      if (actionId) {
+        const { data: cached } = await admin.from("applied_actions").select("response").eq("action_id", actionId).eq("room_id", device.roomId).maybeSingle();
+        if (cached) return jsonResponse(cached.response);
+      }
+      return errorResponse("ROOM_NOT_PLAYING", "Diese Runde läuft nicht mehr.", 409);
+    }
     const context = parseMutationContext(body, false);
     const { data: target, error: targetError } = await admin.from("players").select("player_id,device_id,display_name").eq("room_id", device.roomId).eq("player_id", targetPlayerId).single();
     if (targetError || !target) return errorResponse("PLAYER_NOT_FOUND", "Dieser Spieler ist nicht mehr im Raum.", 404);
