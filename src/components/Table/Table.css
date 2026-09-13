@@ -80,13 +80,14 @@
   z-index: 2;
   display: grid;
   place-items: center;
-  width: 82px;
-  height: 82px;
-  /* Bigger than its 48px grid column and the badge's own box, pulled up and
-     left with negative margins so the figure visibly overlaps the badge's
-     top-left edge instead of sitting neatly inside it - only into the
-     badge's own border/background, never rightward into the name column. */
-  margin: -30px 0 -30px -22px;
+  width: 112px;
+  height: 112px;
+  /* The figure is the main visual now, not a small icon inside the badge:
+     much bigger than its 48px grid column, pulled up and left so it
+     overlaps the badge's top-left edge substantially - the name pill reads
+     as emerging from the head's right side rather than the other way
+     round. Only ever leftward/upward, never into the name/count text. */
+  margin: -44px 0 -44px -32px;
   color: #fff;
   font-size: 1rem;
   font-weight: 900;
@@ -341,40 +342,38 @@
   background: radial-gradient(circle at 36% 28%, #3c5573, #122239 68%);
   box-shadow: 0 0 0 5px rgba(255,255,255,.88), 0 0 24px #247eff, inset 0 0 16px rgba(86,163,255,.45);
 }
-.table-board__status-rail {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  width: min(100%, 560px);
-  border: 1px solid rgba(148,163,184,.18);
-  border-radius: 22px;
-  background: rgba(238,244,251,.78);
-  box-shadow: 0 8px 22px rgba(52,76,108,.1);
+/* Replaces the old 3-column "Letzter Zug / Aktiver Effekt / Nächster
+   Spieler" status rail: the last-played shape now sits right on the
+   discard pile it describes, active effects show as a stamp on whichever
+   player's avatar they affect (matching AUSGESETZT below), and "Nächster
+   Spieler" was dropped outright - the golden turn-pill already says that. */
+.table-board__last-move {
+  min-width: 0;
+  max-width: 120px;
+  padding: 2px 10px;
   overflow: hidden;
-}
-.table-board__status-rail > div {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  grid-template-rows: auto auto;
-  column-gap: 9px;
-  padding: 9px 14px;
-  text-align: left;
-}
-.table-board__status-rail > div + div { border-left: 1px solid rgba(100,116,139,.2); }
-.table-board__status-rail > div > span {
-  grid-row: 1 / 3;
-  align-self: center;
-  color: #2563eb;
-  font-size: 1.25rem;
-}
-.table-board__status-rail small {
-  color: #7a8798;
-  font-size: .56rem;
-}
-.table-board__status-rail strong {
-  overflow: hidden;
-  font-size: .72rem;
+  border-radius: 999px;
+  color: #475569;
+  font-size: .58rem;
+  font-weight: 700;
+  letter-spacing: .04em;
   text-overflow: ellipsis;
   white-space: nowrap;
+  background: rgba(238,244,251,.9);
+  box-shadow: inset 0 1px rgba(255,255,255,.7);
+}
+.table-board__effect-stamp {
+  position: absolute;
+  z-index: 3;
+  top: -7px;
+  left: 10px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  color: #fff;
+  font-size: .58rem;
+  font-weight: 900;
+  background: #2563eb;
+  box-shadow: 0 4px 10px rgba(30,64,175,.35);
 }
 .table-board__crowded-seats {
   position: absolute;
@@ -462,14 +461,6 @@
     width: 110px;
     height: 110px;
   }
-  .table-board__status-rail { width: min(96%, 390px); }
-  .table-board__status-rail > div {
-    column-gap: 5px;
-    padding: 6px 7px;
-  }
-  .table-board__status-rail > div > span { font-size: .9rem; }
-  .table-board__status-rail strong { font-size: .58rem; }
-
   .table-board__crowded-seats {
     inset: 48px 0 auto;
     flex-wrap: nowrap;
@@ -504,8 +495,8 @@
   /* Non-own seats (side players framing the hero row, count 3-6) run
      narrower than the always-full-size own-player card at this width —
      see seatStyle()'s narrow branch in Table.tsx, tuned together with
-     these sizes so the side seats clear the shrunk center-grid above,
-     the hero pile's halo, and the status rail below at 375px width. */
+     these sizes so the side seats clear the shrunk center-grid above and
+     the hero pile's halo at 375px width. */
   .table-board__player--side {
     width: 104px;
     min-height: 44px;
@@ -539,17 +530,11 @@
   .table-board__direction small,
   .table-board__direction strong { display: none; }
   .table-board__direction-orb { width: 36px; height: 36px; font-size: 1.25rem; }
-  .table-board__status-rail { width: 96%; }
-  .table-board__status-rail > div { padding: 5px 4px; }
-  .table-board__status-rail small { font-size: .48rem; }
-  .table-board__status-rail strong { font-size: .52rem; }
 }
 
 @media (max-width: 320px) {
   .table-board__crowded-seats { padding-inline: 10px; }
   .table-board__center-grid { grid-template-columns: 46px 88px 34px; gap: 4px; }
-  .table-board__status-rail > div > span { display: none; }
-  .table-board__status-rail > div { display: flex; flex-direction: column; min-width: 0; }
 }
 
 @media (max-height: 700px) {

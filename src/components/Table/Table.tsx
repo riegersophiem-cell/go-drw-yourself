@@ -69,15 +69,6 @@ function useNarrowTable(): boolean {
   );
 }
 
-function effectLabel(publicState: PublicGameState): string {
-  if (publicState.pendingEffect?.type === "DRAW_STACK") return `+${publicState.pendingEffect.amount}`;
-  if (publicState.phase === "WAITING_FOR_COLOR") return "Farbe wählen";
-  if (publicState.phase === "WAITING_FOR_SWAP_TARGET") return "Tauschziel";
-  if (publicState.phase === "WAITING_FOR_SKIP_TARGET") return "Aussetzen";
-  if (publicState.phase === "WAITING_FOR_EXTRA_DISCARD") return "Zusatzkarte";
-  return "Keiner";
-}
-
 function useHandShufflePulse(publicState: PublicGameState): boolean {
   const [pulsing, setPulsing] = useState(false);
   const lastVersion = useRef<number | null>(null);
@@ -94,7 +85,6 @@ function useHandShufflePulse(publicState: PublicGameState): boolean {
 }
 
 export function Table({ publicState, compact = false, ownPlayerId, playback, canRemovePlayers = false, removingPlayerId, onRemovePlayer }: TableProps) {
-  const currentPlayer = publicState.players.find((player) => player.playerId === publicState.currentPlayerId);
   const shufflePulse = useHandShufflePulse(publicState);
   const narrow = useNarrowTable();
   /* 4-6 players still fit the absolute per-seat layout at desktop widths, but
@@ -127,6 +117,7 @@ export function Table({ publicState, compact = false, ownPlayerId, playback, can
         </div>
         {isActive && <span className="table-board__turn-pill">{isOwn ? "DEIN ZUG" : "AM ZUG"}</span>}
         {publicState.pendingSkipTargets[player.playerId] > 0 && <span className="table-board__skip-stamp">AUSGESETZT</span>}
+        {isActive && publicState.pendingEffect?.type === "DRAW_STACK" && <span className="table-board__effect-stamp">+{publicState.pendingEffect.amount}</span>}
         {canRemovePlayers && !isOwn && <button className="table-board__remove-player" type="button" disabled={!!removingPlayerId} onClick={() => onRemovePlayer?.(player.playerId)} aria-label={`${player.displayName} entfernen`}>{removingPlayerId === player.playerId ? "…" : "×"}</button>}
       </article>
     );
@@ -154,17 +145,13 @@ export function Table({ publicState, compact = false, ownPlayerId, playback, can
               </div>
               <strong>Ablagestapel</strong>
               {publicState.activeColor && <span className={`table-board__active-color table-board__active-color--${publicState.activeColor}`} />}
+              <span className="table-board__last-move">{publicState.topDiscard?.type.replaceAll("_", " ") ?? "Start"}</span>
             </div>
             <div className="table-board__direction">
               <small>Spielrichtung</small>
               <div className="table-board__direction-orb" aria-label={publicState.direction === 1 ? "Im Uhrzeigersinn" : "Gegen den Uhrzeigersinn"}>{publicState.direction === 1 ? "↻" : "↺"}</div>
               <strong>{publicState.direction === 1 ? "Im Uhrzeigersinn" : "Gegen den Uhrzeigersinn"}</strong>
             </div>
-          </div>
-          <div className="table-board__status-rail">
-            <div><span aria-hidden="true">↪</span><small>Letzter Zug</small><strong>{publicState.topDiscard?.type.replaceAll("_", " ") ?? "Start"}</strong></div>
-            <div><span aria-hidden="true">▱</span><small>Aktiver Effekt</small><strong>{effectLabel(publicState)}</strong></div>
-            <div><span aria-hidden="true">●</span><small>Nächster Spieler</small><strong>{currentPlayer?.displayName ?? "–"}</strong></div>
           </div>
         </div>
       </div>

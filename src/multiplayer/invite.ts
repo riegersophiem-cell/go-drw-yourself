@@ -5,9 +5,12 @@ export function buildInviteText(joinUrl: string): string {
 }
 
 export function buildInviteShareData(joinUrl: string): ShareData {
-  return {
-    title: "GO DR*W YOURSELF",
-    text: INVITE_MESSAGE,
-    url: joinUrl,
-  };
+  // Deliberately URL-only: WhatsApp (and most share targets) render a big,
+  // properly-proportioned OG-image card only for a message that IS just a
+  // link. Adding our own text/title here made WhatsApp treat it as a text
+  // message with an auto-linkified URL instead, which gets its own tiny,
+  // squashed inline preview - losing the branded card entirely. The site's
+  // own og:title/og:description already carry the same invite line, so
+  // nothing is lost by leaving them out of the share payload.
+  return { url: joinUrl };
 }

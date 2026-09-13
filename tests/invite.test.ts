@@ -8,11 +8,7 @@ describe("room invitation", () => {
     expect(buildInviteText(joinUrl)).toBe(`${INVITE_MESSAGE}\n${joinUrl}`);
   });
 
-  it("builds Web Share data with title, invitation, and room link kept separate", () => {
-    expect(buildInviteShareData(joinUrl)).toEqual({
-      title: "GO DR*W YOURSELF",
-      text: "Lust auf eine Runde GO DR*W YOURSELF mit mir?",
-      url: joinUrl,
-    });
+  it("builds Web Share data as a bare URL, so targets render their own OG-image link card instead of a plain-text message with a tiny auto-linkified preview", () => {
+    expect(buildInviteShareData(joinUrl)).toEqual({ url: joinUrl });
   });
 });
