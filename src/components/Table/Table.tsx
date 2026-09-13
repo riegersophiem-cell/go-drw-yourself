@@ -117,7 +117,7 @@ export function Table({ publicState, compact = false, ownPlayerId, playback, can
     const disconnected = !player.connected && player.type === "HUMAN";
     return (
       <article key={player.playerId} className={`table-board__player ${crowded ? "table-board__player--crowded" : ""} ${isActive ? "table-board__player--active" : ""} ${isOwn ? "table-board__player--own" : ""} ${!isOwn && seatIndex !== null ? "table-board__player--side" : ""} ${shufflePulse ? "table-board__player--pulse" : ""} ${playback?.active && playback.beat.actorPlayerId === player.playerId ? "table-board__player--playback-actor" : ""} ${playback?.active && playback.beat.targetPlayerId === player.playerId ? "table-board__player--playback-target" : ""}`} style={seatIndex === null ? undefined : seatStyle(seatIndex, orderedPlayers.length)} title={`${player.displayName} – ${player.cardCount} Karten`}>
-        <div className={`table-board__avatar ${player.type === "BOT" ? "table-board__avatar--bot" : ""}`} aria-hidden="true">
+        <div className={`table-board__avatar ${player.type === "BOT" ? "table-board__avatar--bot" : ""} ${AVATAR_IMAGE[player.avatar] ? "" : "table-board__avatar--fallback"}`} aria-hidden="true">
           {AVATAR_IMAGE[player.avatar] ? <img className="table-board__avatar-img" src={AVATAR_IMAGE[player.avatar]} alt="" /> : initials(player.displayName)}
           <span className={`table-board__presence ${disconnected ? "table-board__presence--offline" : ""}`} />
         </div>

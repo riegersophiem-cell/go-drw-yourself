@@ -125,12 +125,18 @@ export function PlayerGame({ session }: PlayerGameProps) {
   if (!publicState) return <div className="page page--centered">Lade Spiel…</div>;
   const ownPublicPlayer = publicState.players.find((player) => player.playerId === session.playerId);
   if (ownPublicPlayer?.eliminated && !ownPublicPlayer.connected) return <div className="page page--centered"><div className="panel"><h1>Du bist nicht mehr im Spiel</h1><p>Die übrigen Spieler spielen ohne dich weiter.</p><button className="btn btn--primary" onClick={() => { clearSession(); navigate("/"); }}>Zur Startseite</button></div></div>;
-  if (ownPublicPlayer?.eliminated) return <main className="player-game player-game--spectating"><div className="player-game__board"><Table publicState={publicState} compact playback={playback.visibleBeat ? { beat: playback.visibleBeat, position: playback.position, total: playback.total, canSkip: playback.canSkip, onSkip: playback.skip, active: !!playback.activeBeat } : null} /></div><div className="player-game__spectator-note"><strong>Du bist ausgeschieden.</strong><span>Die Runde läuft weiter.</span><button type="button" onClick={() => void handleDeparture(session.playerId!, "LEAVE")}>Spiel verlassen</button></div></main>;
-  if (!privateState) return <div className="page page--centered">Lade Spiel…</div>;
+  // Checked before the eliminated-spectator branch and the privateState
+  // loading gate below: becoming eliminated is exactly how a round often
+  // ends (mercy rule, last player standing), and that same commit deletes
+  // the player's private_player_views row - so gating this on privateState
+  // meant the very player whose elimination just ended the game got stuck
+  // forever on "Du bist ausgeschieden" instead of ever seeing who won.
   if (publicState.phase === "GAME_OVER" && !playback.isPlaying && presentationQueue.length === 0) {
     const winnerName = publicState.players.find((p) => p.playerId === publicState.winnerPlayerId)?.displayName ?? "?";
     return <WinnerOverlay session={session} winnerName={winnerName} players={players} gameId={publicState.gameId ?? null} version={publicState.version} />;
   }
+  if (ownPublicPlayer?.eliminated) return <main className="player-game player-game--spectating"><div className="player-game__board"><Table publicState={publicState} compact playback={playback.visibleBeat ? { beat: playback.visibleBeat, position: playback.position, total: playback.total, canSkip: playback.canSkip, onSkip: playback.skip, active: !!playback.activeBeat } : null} /></div><div className="player-game__spectator-note"><strong>Du bist ausgeschieden.</strong><span>Die Runde läuft weiter.</span><button type="button" onClick={() => void handleDeparture(session.playerId!, "LEAVE")}>Spiel verlassen</button></div></main>;
+  if (!privateState) return <div className="page page--centered">Lade Spiel…</div>;
 
   const canUseMainActions = handOpen && isMyTurn && !busy && !playback.isPlaying && !needsColor && !needsSwapTarget && !needsSkipTarget && !needsExtraDiscard;
   const legalIds = needsExtraDiscard ? privateState.ownHand.map((card) => card.instanceId) : isMyTurn ? privateState.legalMoves : [];

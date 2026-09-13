@@ -11,6 +11,14 @@
   overscroll-behavior-inline: contain;
   -webkit-overflow-scrolling: touch;
   scroll-padding-inline: 42px;
+  /* The visible strip is often much narrower than the fanned hand (down to
+     ~190px on a narrow phone with the sort/action columns either side), so
+     cards get hard-clipped by this scroll viewport's edge mid-scroll. The
+     fan's own inline padding (see below) keeps this fade clear of the
+     actual first/last card at the scroll extremes, so nothing reachable
+     ever fades - only the abrupt clip line becomes a soft edge instead. */
+  -webkit-mask-image: linear-gradient(to right, transparent, black 26px, black calc(100% - 26px), transparent);
+  mask-image: linear-gradient(to right, transparent, black 26px, black calc(100% - 26px), transparent);
 }
 
 .player-hand__fan {
