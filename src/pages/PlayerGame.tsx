@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { dispatchAction, leaveRoom, removePlayer } from "../multiplayer/api";
 import { clearSession, type DeviceSession } from "../multiplayer/session";
@@ -39,6 +39,7 @@ export function PlayerGame({ session }: PlayerGameProps) {
   const [error, setError] = useState<string | null>(null);
   const [handOpen, setHandOpen] = useState(true);
   const [removingPlayerId, setRemovingPlayerId] = useState<string | null>(null);
+  const [acknowledgedTurn, setAcknowledgedTurn] = useState<string | null>(null);
 
   const isMyTurn = publicState?.currentPlayerId === session.playerId;
   const needsColor = isMyTurn && publicState?.phase === "WAITING_FOR_COLOR";
@@ -46,6 +47,23 @@ export function PlayerGame({ session }: PlayerGameProps) {
   const needsSkipTarget = isMyTurn && publicState?.phase === "WAITING_FOR_SKIP_TARGET";
   const needsExtraDiscard = isMyTurn && publicState?.phase === "WAITING_FOR_EXTRA_DISCARD";
   const selectionLocked = needsSwapTarget || needsSkipTarget || needsColor;
+  const attentionTurn = isMyTurn && publicState?.phase === "WAITING_FOR_PLAY" && !playback.isPlaying
+    ? `${publicState.gameId}:${publicState.version}`
+    : null;
+  const needsTurnAttention = attentionTurn !== null && acknowledgedTurn !== attentionTurn;
+
+  useEffect(() => {
+    if (!needsTurnAttention || !attentionTurn) return;
+    const acknowledge = () => setAcknowledgedTurn(attentionTurn);
+    window.addEventListener("mousemove", acknowledge, { once: true });
+    window.addEventListener("pointerdown", acknowledge, { once: true });
+    window.addEventListener("touchstart", acknowledge, { once: true, passive: true });
+    return () => {
+      window.removeEventListener("mousemove", acknowledge);
+      window.removeEventListener("pointerdown", acknowledge);
+      window.removeEventListener("touchstart", acknowledge);
+    };
+  }, [attentionTurn, needsTurnAttention]);
 
   const otherActiveCandidates = useMemo(() => publicState?.players.filter((p) => p.playerId !== session.playerId && !p.eliminated) ?? [], [publicState, session.playerId]);
   const displayedHand = useMemo(() => {
@@ -118,7 +136,7 @@ export function PlayerGame({ session }: PlayerGameProps) {
   const legalIds = needsExtraDiscard ? privateState.ownHand.map((card) => card.instanceId) : isMyTurn ? privateState.legalMoves : [];
 
   return (
-    <main className={`player-game ${handOpen ? "" : "player-game--hand-collapsed"}`}>
+    <main className={`player-game ${handOpen ? "" : "player-game--hand-collapsed"} ${needsTurnAttention ? "player-game--turn-attention" : ""}`}>
       <header className="player-game__topbar">
         <div className="player-game__brand"><strong>GO DR*W<br />YOURSELF</strong><span>Swap it. Stack it. Make it someone else&apos;s problem.</span></div>
         <div className="player-game__room"><span>Raum</span><strong>{session.roomCode}</strong></div>

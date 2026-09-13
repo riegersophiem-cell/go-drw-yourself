@@ -261,9 +261,30 @@ describe("DISCARD_ONE_EXTRA (ex 6 / -1)", () => {
     const finalState = discardExtraCard(played.state, a.playerId, draw2InstanceId);
 
     expect(getHandOfPlayer(finalState, a.playerId).cardInstanceIds.length).toBe(aHandBefore - 1);
-    expect(finalState.discardPile[finalState.discardPile.length - 1]).toBe(draw2InstanceId);
+    expect(finalState.discardPile.at(-1)).toBe(instanceId);
+    expect(finalState.discardPile.at(-2)).toBe(draw2InstanceId);
     expect(finalState.pendingEffect).toBeNull(); // the Draw 2's effect never triggered
     expect(finalState.currentPlayerId).toBe(b.playerId); // normal single-step advance
+  });
+});
+
+describe("DISCARD_ALL", () => {
+  it("puts all matching cards below the action card so the action remains visible", () => {
+    let state = newGame(["A", "B"]);
+    const [a] = state.players;
+    const actionDef = Object.values(state.cardDefinitions).find((def) => def.type === "DISCARD_ALL" && def.color === state.activeColor)!;
+    const actionId = Object.entries(state.cardInstanceRegistry).find(([, defId]) => defId === actionDef.defId)![0];
+    const matchingIds = Object.entries(state.cardInstanceRegistry)
+      .filter(([instanceId, defId]) => instanceId !== actionId && state.cardDefinitions[defId].color === state.activeColor)
+      .slice(0, 2)
+      .map(([instanceId]) => instanceId);
+    state = giveCardToPlayer(state, a.playerId, actionId);
+    for (const matchingId of matchingIds) state = giveCardToPlayer(state, a.playerId, matchingId);
+
+    const result = playCard(state, a.playerId, actionId).state;
+
+    expect(result.discardPile.at(-1)).toBe(actionId);
+    for (const matchingId of matchingIds) expect(result.discardPile.slice(0, -1)).toContain(matchingId);
   });
 });
 

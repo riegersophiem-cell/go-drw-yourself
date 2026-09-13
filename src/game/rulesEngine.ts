@@ -283,7 +283,12 @@ export function discardExtraCard(
   if (state.pendingExtraDiscardPlayerId !== playerId) throw new GameError("NOT_YOUR_TURN");
 
   let working = removeFromHand(state, playerId, cardInstanceId);
-  working = { ...working, discardPile: [...working.discardPile, cardInstanceId] };
+  const actionCardId = working.discardPile.at(-1);
+  if (!actionCardId) throw new Error("EMPTY_DISCARD_PILE");
+  // The extra card is discarded without becoming the visible top card. The
+  // action card remains on top so the table still communicates which effect
+  // was resolved and matching continues against that action card.
+  working = { ...working, discardPile: [...working.discardPile.slice(0, -1), cardInstanceId, actionCardId] };
   working = { ...working, pendingExtraDiscardPlayerId: null, phase: "WAITING_FOR_PLAY" };
   working = bumpVersion(working);
 
@@ -425,10 +430,14 @@ function applyDiscardAll(state: GameState, playerId: string): GameState {
   const toDiscard = hand.cardInstanceIds.filter((id) => definitionOfInstance(state, id).color === state.activeColor);
   const remaining = hand.cardInstanceIds.filter((id) => !toDiscard.includes(id));
   const newHand = { ...hand, cardInstanceIds: remaining };
+  const actionCardId = state.discardPile.at(-1);
+  if (!actionCardId) return state;
   return {
     ...state,
     hands: { ...state.hands, [newHand.handId]: newHand },
-    discardPile: [...state.discardPile, ...toDiscard],
+    // All matching cards go underneath the action card so DISCARD_ALL stays
+    // visible and remains the matching reference for the next player.
+    discardPile: [...state.discardPile.slice(0, -1), ...toDiscard, actionCardId],
   };
 }
 
