@@ -113,8 +113,14 @@
    above its bottom edge - fine in TableGame's standalone display, but here
    the board's own bottom edge IS the seam against the hand dock, so that
    border reads as the top edge of a boxed-off "window" around the cards
-   the moment the hand opens. Pull it well clear of the seam instead. */
-.player-game__board .table-board__rings { inset: 8% 2% 11%; }
+   the moment the hand opens. Pulling the inset out alone wasn't enough:
+   its own drop-shadow (0 24px 70px) is a soft blur far wider than the
+   border itself, so it kept bleeding into the dock regardless. Drop the
+   outer shadow here and keep only a faint inward glow. */
+.player-game__board .table-board__rings {
+  inset: 8% 2% 11%;
+  box-shadow: inset 0 0 30px rgba(84,122,164,.07);
+}
 
 .player-game__dock {
   position: relative;

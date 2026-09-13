@@ -5,6 +5,7 @@ import { nextRound } from "../../multiplayer/api";
 import { clearSession, type DeviceSession } from "../../multiplayer/session";
 import { supabase } from "../../supabase/client";
 import type { RoomPlayerRow } from "../../hooks/useRoomRealtime";
+import { AVATAR_IMAGE } from "../../game/avatarImages";
 import "./WinnerOverlay.css";
 
 export interface WinnerOverlayProps {
@@ -81,8 +82,8 @@ export function WinnerOverlay({ session, winnerName, players, gameId, version }:
         <ul>
           {ranked.map((p) => (
             <li key={p.player_id}>
-              <span>
-                {p.player_type === "BOT" ? "🤖 " : "👤 "}
+              <span className="winner-overlay__player">
+                {AVATAR_IMAGE[p.avatar] ? <img className="winner-overlay__avatar" src={AVATAR_IMAGE[p.avatar]} alt="" /> : (p.player_type === "BOT" ? "🤖 " : "👤 ")}
                 {p.display_name}
               </span>
               <span>

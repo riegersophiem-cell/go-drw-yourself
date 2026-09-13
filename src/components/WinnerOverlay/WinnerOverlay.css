@@ -14,6 +14,10 @@
 }
 
 .winner-overlay__trophy {
+  /* Without an explicit line-height this box inherits a much smaller one
+     from an ancestor, so the emoji glyph (sized to the 4rem font) overflows
+     its own box and visually cuts into the name below despite the flex gap. */
+  line-height: 1;
   font-size: 4rem;
   filter: drop-shadow(0 4px 14px rgba(255,193,42,.45));
 }
@@ -60,6 +64,20 @@
   display: flex;
   justify-content: space-between;
   gap: 24px;
+}
+
+.winner-overlay__player {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.winner-overlay__avatar {
+  width: 28px;
+  height: 32px;
+  border-radius: 6px;
+  object-fit: contain;
+  object-position: bottom center;
 }
 
 .winner-overlay__actions {
