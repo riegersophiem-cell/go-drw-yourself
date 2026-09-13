@@ -119,9 +119,21 @@ Deno.serve(async (req) => {
     await admin.channel(`room:${device.roomId}:public`).send({ type: "broadcast", event: "state_changed", payload: batch });
     return jsonResponse({ ...(data as Record<string, unknown>), batch, gameId: state.gameId, version: state.version });
   } catch (err) {
-    const code = err instanceof Error ? err.message : "SERVER_ERROR";
+    // remove_lobby_player/apply_player_departure raise plain Postgres
+    // exceptions, which the Supabase client surfaces as a PostgrestError
+    // object (not an Error instance). `err instanceof Error` missed those,
+    // so every RPC-raised business error (already-removed player, race
+    // between two removals, etc) fell through to String(err) === "[object
+    // Object]" - a 500 with an unreadable message instead of the specific
+    // outcome. Reproduced live: removing an already-departed player twice.
+    const code = err instanceof Error ? err.message
+      : typeof err === "object" && err !== null && typeof (err as { message?: unknown }).message === "string" ? (err as { message: string }).message
+      : "SERVER_ERROR";
     if (code === "MISSING_REQUIRED_FIELDS") return errorResponse(code, "Bitte lade die Seite neu.", 400);
-    if (String(err).includes("STALE_GAME_STATE") || String(err).includes("GAME_CHANGED")) return errorResponse("STALE_GAME_STATE", "Der Spielstand hat sich geändert.", 409);
-    return errorResponse("SERVER_ERROR", String(err), 500);
+    if (code.includes("STALE_GAME_STATE") || code.includes("GAME_CHANGED")) return errorResponse("STALE_GAME_STATE", "Der Spielstand hat sich geändert.", 409);
+    if (code === "PLAYER_NOT_FOUND" || code === "PLAYER_NOT_ACTIVE") return errorResponse(code, "Dieser Spieler ist nicht mehr im Raum.", 404);
+    if (code === "NOT_HOST") return errorResponse(code, "Nur der Host kann andere Spieler entfernen.", 403);
+    if (code === "ROOM_NOT_IN_LOBBY" || code === "ROOM_NOT_PLAYING") return errorResponse(code, "Diese Runde läuft nicht mehr.", 409);
+    return errorResponse("SERVER_ERROR", code, 500);
   }
 });
