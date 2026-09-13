@@ -80,14 +80,14 @@
   z-index: 2;
   display: grid;
   place-items: center;
-  width: 112px;
-  height: 112px;
+  width: 194px;
+  height: 194px;
   /* The figure is the main visual now, not a small icon inside the badge:
      much bigger than its 48px grid column, pulled up and left so it
      overlaps the badge's top-left edge substantially - the name pill reads
      as emerging from the head's right side rather than the other way
      round. Only ever leftward/upward, never into the name/count text. */
-  margin: -44px 0 -44px -32px;
+  margin: -80px 0 -80px -136px;
   color: #fff;
   font-size: 1rem;
   font-weight: 900;
@@ -144,6 +144,9 @@
 .table-board__player--own .table-board__player-count { color: #64748b; }
 .table-board__turn-pill {
   position: absolute;
+  /* Must stay above the (now much larger) avatar - its overhang can reach
+     down past the badge's bottom edge, exactly where this pill sits. */
+  z-index: 5;
   left: 50%;
   bottom: -13px;
   transform: translateX(-50%);
@@ -160,6 +163,7 @@
 }
 .table-board__skip-stamp {
   position: absolute;
+  z-index: 4;
   top: -7px;
   right: 10px;
   padding: 2px 7px;
@@ -171,7 +175,7 @@
 }
 .table-board__remove-player {
   position: absolute;
-  z-index: 3;
+  z-index: 4;
   top: -7px;
   right: -7px;
   display: grid;
@@ -193,7 +197,12 @@
 
 .table-board__center-stage {
   position: absolute;
-  z-index: 3;
+  /* Above .table-board__player (z-index 5): a player card is a single
+     stacking context, so its oversized avatar paints with the whole card
+     regardless of the avatar's own (local) z-index. Without this, an
+     avatar whose overhang reaches toward the middle of the table could
+     paint over the draw/discard piles. */
+  z-index: 6;
   left: 50%;
   top: 53%;
   transform: translate(-50%, -50%);
@@ -364,7 +373,7 @@
 }
 .table-board__effect-stamp {
   position: absolute;
-  z-index: 3;
+  z-index: 4;
   top: -7px;
   left: 10px;
   padding: 2px 7px;
@@ -382,7 +391,10 @@
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 7px;
+  /* Each card's avatar overhangs ~52px to the left of its own card (see
+     .table-board__player--crowded .table-board__avatar) - a tight gap let
+     it visually crash into the previous card in the row/scroll-strip. */
+  gap: 56px;
 }
 .table-board__player.table-board__player--crowded {
   position: relative;
@@ -396,9 +408,9 @@
   border-radius: 20px;
 }
 .table-board__player--crowded .table-board__avatar {
-  width: 32px;
-  height: 32px;
-  margin: -12px 0 -12px -9px;
+  width: 84px;
+  height: 84px;
+  margin: -34px 0 -34px -52px;
   font-size: .8rem;
 }
 .table-board__player--crowded .table-board__player-name { font-size: .72rem; }
@@ -465,7 +477,7 @@
     inset: 48px 0 auto;
     flex-wrap: nowrap;
     justify-content: flex-start;
-    gap: 7px;
+    gap: 56px;
     overflow-x: auto;
     padding: 6px 14px 16px;
     scrollbar-width: none;
