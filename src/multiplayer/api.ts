@@ -156,10 +156,6 @@ export function addBot(deviceId: string, sessionToken: string, displayName?: str
   return invoke<{ playerId: string; displayName: string }>("add-bot", { deviceId, sessionToken, displayName, strategyLevel });
 }
 
-export function removeBot(deviceId: string, sessionToken: string, botPlayerId: string) {
-  return invoke<{ ok: true }>("remove-bot", { deviceId, sessionToken, botPlayerId });
-}
-
 export interface MutationBatchResult { ok: true; batch: GameEventBatch; gameId: string; version: number }
 
 export interface MutationContext {
