@@ -1,0 +1,95 @@
+.game-table {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.game-table__surface {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+
+/* TABLE_DEVICE: the ring is absolutely positioned (see PlayerRing.css) over
+   the full surface — hero center dominates visually because the ring sits
+   at the surface's outer edge while the discard/draw stage sits centered
+   and large (see DiscardStage.css sizing). No permanent header/status bar
+   here at all (brief section 4/73) — only the discreet seat-edit toggle. */
+/* Capped so the percentage-based player ring (PlayerRing.css) can't stretch
+   into an absurdly wide, thin ellipse on ultra-wide/large desktop monitors
+   (found live at 1920x1080: seats were pushed almost to the screen edges
+   with a large dead gap top/bottom). Centered within any wider viewport. */
+/* Tightened further for HERO_CENTER_FIX_REPORT.md: the previous 1360x840 cap
+   still left a lot of dead space between the (now tighter, 35/30) player
+   ring and the Hero Center on wide desktops. A smaller, denser play area
+   plus the enlarged Discard/Draw sizing below (DiscardStage.css) is what
+   actually reads as "Hero Center dominates" instead of a sparse tabletop. */
+.game-table--table_device .game-table__surface { min-height: 420px; width: 100%; max-width: 1120px; max-height: 760px; margin-inline: auto; }
+
+/* A secondary function, not a primary CTA — idle state is a small, low-
+   contrast ghost icon button; only the active (currently editing) state
+   earns a label and stronger color, since that's a real mode the operator
+   needs to remember they're in. */
+.game-table__seat-edit-toggle {
+  position: absolute;
+  z-index: 30;
+  right: 14px;
+  top: 14px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, .14);
+  border-radius: 999px;
+  color: rgba(210, 220, 235, .75);
+  font: inherit;
+  font-size: .68rem;
+  font-weight: 800;
+  background: rgba(255, 255, 255, .06);
+  box-shadow: none;
+  backdrop-filter: blur(6px);
+  cursor: pointer;
+  transition: background .18s ease, color .18s ease, width .18s ease, padding .18s ease;
+}
+.game-table__seat-edit-toggle:hover { background: rgba(255, 255, 255, .12); color: rgba(230, 235, 245, .95); }
+.game-table__seat-edit-toggle span:first-child { display: grid; place-items: center; width: 30px; height: 30px; flex-shrink: 0; }
+.game-table__seat-edit-toggle--active {
+  width: auto;
+  padding: 0 14px 0 4px;
+  color: #fff;
+  background: linear-gradient(180deg, #7047eb, #5a34c9);
+  box-shadow: 0 8px 22px rgba(90, 52, 201, .34);
+}
+
+/* REMOTE_MOBILE_FULL: follow-up to MOBILE_HAND_UI_FIX_REPORT.md — now shares
+   TABLE_DEVICE's coordinate model instead of a separate ring-strip-then-hero
+   flex stack. PlayerRing (compact) and DiscardStage are both absolutely
+   positioned over the same surface box (see PlayerRing.css's
+   computeCompactRingSeatPoints and DiscardStage.css's default 50/50
+   centering), so the discard pile sits exactly at the ellipse's geometric
+   center and the seats visibly sit "on the table" the same way TABLE_DEVICE's
+   do — not a horizontal chip strip floating above it. Capped shorter than
+   TABLE_DEVICE's surface since a phone screen has to share this space with
+   the hand dock below. */
+.game-table--remote_mobile_full .game-table__surface {
+  min-height: 200px;
+  max-height: 44vh;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .game-table__seat-edit-toggle { transition: none; }
+}
+
+/* TABLE_DEVICE's own theme control - top-LEFT specifically so it never
+   collides with the seat-edit toggle, which already owns the top-right
+   corner (see .game-table__seat-edit-toggle above). */
+.table-game__theme-switch {
+  position: absolute;
+  z-index: 30;
+  left: 14px;
+  top: 14px;
+}

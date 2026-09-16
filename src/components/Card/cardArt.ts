@@ -1,87 +1,105 @@
 import type { CardColor, CardType } from "../../game/types";
 
-/**
- * The v1 asset drop (see project docs) is the ONLY permitted source for how
- * a card looks — every colored/wild front and the card back are complete,
- * final designs. Geometry cards deliberately show symbols only; their
- * plain-language names remain here solely for accessible labels.
- */
+// The final PNG art in /public/assets/cards/final/png/ is the binding
+// visual source of truth (see CARD_ASSET_UPDATE_REPORT.md and
+// docs/cards/CARD_ASSET_MAPPING.md) — no CSS-rebuilt cards, no old SVG/PNG
+// pair (moved to /public/assets/cards/deprecated/). Every CardType now has a
+// real final asset — the DRAW_1/WILD_DRAW_4 gap from the initial batch was
+// closed by a follow-up delivery (DRAW_1: full 5-color pixel-matched set;
+// WILD_DRAW_4: colorless chaos card) plus a redesigned DRAW_2/DRAW_4 (only
+// delivered in one color each — gold/violet — the other 4 colors were
+// generated locally via an HSV hue-shift from that master, canonicalized
+// against the exact hue already used elsewhere in the deck; see
+// CARD_ASSET_UPDATE_REPORT.md for the generation method).
 export interface CardArtEntry {
-  file: string;
+  url: string;
   displayName: string;
   subtitle: string;
 }
 
-const PLAIN_ART: Record<CardType, { displayName: string; subtitle: string }> = {
-  TRIANGLE: { displayName: "PASS", subtitle: "PLAY IT FORWARD" },
-  SQUARE: { displayName: "LINK", subtitle: "HOLD THE LINE" },
-  CIRCLE: { displayName: "PULSE", subtitle: "KEEP IT MOVING" },
-  DIAMOND: { displayName: "SHOVE", subtitle: "PUSH THE TURN" },
-  SEMICIRCLE: { displayName: "ARC", subtitle: "BEND THE FLOW" },
-  ROTATE_HANDS: { displayName: "ROTATE", subtitle: "EVERY HAND MOVES" },
-  TARGET_SKIP: { displayName: "TARGET", subtitle: "CHOOSE WHO SITS OUT" },
-  GIVE_TWO_TO_LOWEST: { displayName: "LOWEST", subtitle: "SMALLEST HAND DRAWS 2" },
-  DISCARD_ONE_EXTRA: { displayName: "DITCH", subtitle: "DROP ONE EXTRA" },
-  SWAP_HAND: { displayName: "SWAP", subtitle: "TRADE COMPLETE HANDS" },
-  SKIP: { displayName: "SKIP", subtitle: "NEXT PLAYER LOSES A TURN" },
-  REVERSE: { displayName: "REVERSE", subtitle: "FLIP THE DIRECTION" },
-  DRAW_1: { displayName: "DRAW 1", subtitle: "MAKE THEM TAKE ONE" },
-  DRAW_2: { displayName: "DRAW 2", subtitle: "MAKE THEM TAKE TWO" },
-  DISCARD_ALL: { displayName: "DROP ALL", subtitle: "DUMP ONE COLOR" },
-  // Wild types below use their own WILD_ART entry instead of this table's
-  // per-color file naming — listed here only so the Record<CardType, ...>
-  // stays exhaustive for the colored branch's type-checking.
-  WILD: { displayName: "WILD", subtitle: "CHOOSE THE COLOR" },
-  WILD_DRAW_4: { displayName: "WILD DRAW 4", subtitle: "CHOOSE. THEY DRAW FOUR." },
-  WILD_DRAW_6: { displayName: "WILD DRAW 6", subtitle: "CHOOSE. THEY DRAW SIX." },
-  WILD_DRAW_10: { displayName: "WILD DRAW 10", subtitle: "CHOOSE. THEY DRAW TEN." },
-  SKIP_EVERYONE: { displayName: "SKIP ALL", subtitle: "EVERYONE ELSE SITS OUT" },
-  WILD_REVERSE_DRAW_4: { displayName: "REVERSE +4", subtitle: "FLIP IT. THEY DRAW FOUR." },
-  WILD_COLOR_ROULETTE: { displayName: "COLOR ROULETTE", subtitle: "LET CHAOS CHOOSE" },
+const FINAL_PNG_DIR = "/assets/cards/final/png";
+
+// The final art's own filenames spell yellow as "gold" — an asset-naming
+// choice only, CardColor itself is untouched (still "YELLOW").
+const FINAL_COLOR_SLUG: Record<Exclude<CardColor, "WILD">, string> = {
+  RED: "red", BLUE: "blue", GREEN: "green", YELLOW: "gold", VIOLET: "violet",
 };
 
-const COLOR_FILE_SLUG: Record<Exclude<CardColor, "WILD">, string> = {
-  RED: "red",
-  BLUE: "blue",
-  GREEN: "green",
-  YELLOW: "yellow",
+interface ArtInfo {
+  displayName: string;
+  subtitle: string;
+  urlFor: (color: CardColor) => string;
+}
+
+/** CORE family: core_{color}_{shape}.png — colored, one shape per type. */
+function core(shape: "triangle" | "square" | "circle" | "half_circle" | "diamond", displayName: string, subtitle: string): ArtInfo {
+  return {
+    displayName,
+    subtitle,
+    urlFor: (color) => `${FINAL_PNG_DIR}/core_${FINAL_COLOR_SLUG[color as Exclude<CardColor, "WILD">]}_${shape}.png`,
+  };
+}
+
+/** ACTION family: action_{color}_{slug}.png — colored, one slug per type. */
+function action(
+  slug: "timeout" | "lowest" | "one_more" | "draw_1" | "draw_2" | "draw_4" | "skip" | "reverse" | "drop_all",
+  displayName: string,
+  subtitle: string,
+): ArtInfo {
+  return {
+    displayName,
+    subtitle,
+    urlFor: (color) => `${FINAL_PNG_DIR}/action_${FINAL_COLOR_SLUG[color as Exclude<CardColor, "WILD">]}_${slug}.png`,
+  };
+}
+
+/** CHAOS family: chaos_{slug}.png — colorless, no color segment in the filename. */
+function chaos(
+  slug: "swap" | "rotate" | "skip_all" | "reverse_plus_4" | "wild_draw_4" | "wild_draw_6" | "wild_draw_10" | "color_roulette" | "wild_wish",
+  displayName: string,
+  subtitle: string,
+): ArtInfo {
+  return { displayName, subtitle, urlFor: () => `${FINAL_PNG_DIR}/chaos_${slug}.png` };
+}
+
+const ART: Record<CardType, ArtInfo> = {
+  // CORE (Basic PASS/LINK/PULSE/ARC + Core Action SHOVE) — see docs/cards/CARD_LOGIC.md.
+  TRIANGLE: core("triangle", "PASS", "PLAY IT FORWARD"),
+  SQUARE: core("square", "LINK", "HOLD THE LINE"),
+  CIRCLE: core("circle", "PULSE", "KEEP IT MOVING"),
+  SEMICIRCLE: core("half_circle", "ARC", "BEND THE FLOW"),
+  DIAMOND: core("diamond", "SHOVE", "PUSH THE TURN"),
+
+  // ACTION (colored)
+  TARGET_SKIP: action("timeout", "TARGET", "CHOOSE WHO SITS OUT"),
+  GIVE_TWO_TO_LOWEST: action("lowest", "LOWEST", "SMALLEST HAND DRAWS 2"),
+  DISCARD_ONE_EXTRA: action("one_more", "DITCH", "DROP ONE EXTRA"),
+  DRAW_1: action("draw_1", "DRAW 1", "MAKE THEM TAKE ONE"),
+  DRAW_2: action("draw_2", "DRAW 2", "MAKE THEM TAKE TWO"),
+  DRAW_4: action("draw_4", "DRAW 4", "MAKE THEM TAKE FOUR"),
+  SKIP: action("skip", "SKIP", "NEXT PLAYER SITS OUT"),
+  REVERSE: action("reverse", "REVERSE", "FLIP THE DIRECTION"),
+  DISCARD_ALL: action("drop_all", "DROP ALL", "DUMP ONE COLOR"),
+
+  // CHAOS (colorless)
+  SWAP_HAND: chaos("swap", "SWAP", "TRADE COMPLETE HANDS"),
+  ROTATE_HANDS: chaos("rotate", "ROTATE", "EVERY HAND MOVES"),
+  SKIP_EVERYONE: chaos("skip_all", "SKIP ALL", "EVERYONE ELSE SITS OUT"),
+  WILD_REVERSE_DRAW_4: chaos("reverse_plus_4", "REVERSE +4", "FLIP IT. THEY DRAW FOUR."),
+  WILD_DRAW_4: chaos("wild_draw_4", "WILD DRAW 4", "CHOOSE. THEY DRAW FOUR."),
+  WILD_DRAW_6: chaos("wild_draw_6", "WILD DRAW 6", "CHOOSE. THEY DRAW SIX."),
+  WILD_DRAW_10: chaos("wild_draw_10", "WILD DRAW 10", "CHOOSE. THEY DRAW TEN."),
+  WILD_COLOR_ROULETTE: chaos("color_roulette", "COLOR ROULETTE", "LET CHAOS CHOOSE"),
+  WILD: chaos("wild_wish", "WILD", "CHOOSE THE COLOR"),
 };
 
-const WILD_TYPE_FILE_SLUG: Partial<Record<CardType, string>> = {
-  WILD: "wild",
-  WILD_DRAW_4: "draw_4",
-  WILD_DRAW_6: "draw_6",
-  WILD_DRAW_10: "draw_10",
-  SKIP_EVERYONE: "skip_everyone",
-  WILD_REVERSE_DRAW_4: "reverse_draw_4",
-  WILD_COLOR_ROULETTE: "color_roulette",
-};
-
-export const CARD_BACK_FILE = "gdy_card_back";
-
-/** Resolves a card's artwork file (without extension) and its baked-in plain-language text. */
 export function getCardArt(color: CardColor, type: CardType): CardArtEntry {
-  const info = PLAIN_ART[type];
-  if (color === "WILD") {
-    const slug = WILD_TYPE_FILE_SLUG[type];
-    if (!slug) throw new Error(`No wild artwork for card type ${type}`);
-    return { file: `gdy_wild_${slug}`, ...info };
-  }
-  return { file: `gdy_${COLOR_FILE_SLUG[color]}_${type.toLowerCase()}`, ...info };
+  const info = ART[type];
+  return { url: info.urlFor(color), displayName: info.displayName, subtitle: info.subtitle };
 }
 
-// Vite bundles every file this glob matches and gives back its final URL —
-// the only way to reference all 68 assets without a hand-written import per file.
-const CARD_SVG_URLS = import.meta.glob<string>("../../assets/cards/*.svg", { eager: true, query: "url", import: "default" });
-
-function resolveUrl(file: string): string {
-  const url = CARD_SVG_URLS[`../../assets/cards/${file}.svg`];
-  if (!url) throw new Error(`Missing card artwork file: ${file}.svg`);
-  return url;
+export function cardArtPngUrl(color: CardColor, type: CardType): string {
+  return getCardArt(color, type).url;
 }
 
-export function cardArtUrl(color: CardColor, type: CardType): string {
-  return resolveUrl(getCardArt(color, type).file);
-}
-
-export const cardBackUrl = resolveUrl(CARD_BACK_FILE);
+export const cardBackPngUrl = `${FINAL_PNG_DIR}/backcover.png`;

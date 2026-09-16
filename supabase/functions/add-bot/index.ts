@@ -2,6 +2,9 @@ import { authenticateDevice } from "../_shared/auth.ts";
 import { corsHeaders, errorResponse, jsonResponse, supabaseAdmin } from "../_shared/supabaseAdmin.ts";
 import { botAvatarForIndex } from "../../../src/game/avatars.ts";
 
+/** Same room-wide cap as join-room — see LOBBY_SESSION_FLOW_REPORT.md (NOT yet deployed). */
+const MAX_PLAYERS = 8;
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders() });
 
@@ -13,6 +16,14 @@ Deno.serve(async (req) => {
     const { data: room } = await admin.from("rooms").select("*").eq("room_id", device.roomId).single();
     if (room.host_device_id !== device.deviceId) return errorResponse("NOT_HOST", "Nur der Host kann Bots hinzufügen.", 403);
     if (room.status !== "LOBBY") return errorResponse("ROOM_NOT_IN_LOBBY", "Bots können nur in der Lobby hinzugefügt werden.", 409);
+
+    const { count: seatedCount } = await admin
+      .from("players")
+      .select("player_id", { count: "exact", head: true })
+      .eq("room_id", device.roomId);
+    if ((seatedCount ?? 0) >= MAX_PLAYERS) {
+      return errorResponse("ROOM_FULL", "Dieser Raum ist voll.", 409);
+    }
 
     const { data: seatData } = await admin
       .from("players")

@@ -15,7 +15,7 @@ describe("game event derivation", () => {
     expect(JSON.stringify(events)).not.toContain(getHandOfPlayer(after,"a").cardInstanceIds.at(-1));
   });
   it("describes a draw-stack resolution with the public total", () => {
-    const base=game(); const before={...base,pendingEffect:{type:"DRAW_STACK" as const,amount:4,sourcePlayerId:"b",allowedResponseDefIds:[]}};
+    const base=game(); const before={...base,pendingEffect:{type:"DRAW_STACK" as const,amount:4,lastDrawValue:4,terminal:false,sourcePlayerId:"b"}};
     const after=drawFromStackOrDeck(before,"a",undefined,rng);
     expect(deriveGameActionEvents(before,after,"a",{type:"DRAW_CARD"})[0]).toEqual(expect.objectContaining({type:"DRAW_STACK_RESOLVED",payload:{playerId:"a",amount:4}}));
   });
@@ -41,5 +41,19 @@ describe("game event derivation", () => {
     const after: GameState = { ...before, hands: { ...before.hands, [handA.handId]: afterHandA }, version: before.version + 1 };
     const events = deriveGameActionEvents(before, after, "a", { type: "PLAY_CARD", cardInstanceId: lowestInstanceId });
     expect(events).toContainEqual(expect.objectContaining({ type: "DRAW", actorPlayerId: "a", payload: { playerId: "a", count: 2 } }));
+  });
+
+  it("reports WILD_COLOR_ROULETTE's engine-chosen color even though no chosenColor was ever supplied by the caller", () => {
+    // Without this, the random result the engine already committed to
+    // `after.activeColor` would be invisible to playback/narration entirely -
+    // no CHOSE_COLOR event, no beat carrying the resolved color anywhere.
+    const base = game();
+    const rouletteDefId = Object.values(base.cardDefinitions).find((d) => d.type === "WILD_COLOR_ROULETTE")!.defId;
+    const rouletteInstanceId = Object.entries(base.cardInstanceRegistry).find(([, defId]) => defId === rouletteDefId)![0];
+    const handA = getHandOfPlayer(base, "a");
+    const before: GameState = { ...base, hands: { ...base.hands, [handA.handId]: { ...handA, cardInstanceIds: [rouletteInstanceId, ...handA.cardInstanceIds] } } };
+    const after: GameState = { ...before, activeColor: "VIOLET", currentPlayerId: "b", direction: 1, version: before.version + 1 };
+    const events = deriveGameActionEvents(before, after, "a", { type: "PLAY_CARD", cardInstanceId: rouletteInstanceId });
+    expect(events).toContainEqual(expect.objectContaining({ type: "CHOSE_COLOR", actorPlayerId: "a", payload: { playerId: "a", color: "VIOLET" } }));
   });
 });

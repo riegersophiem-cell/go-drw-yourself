@@ -233,11 +233,28 @@ export async function fetchPublicState(roomId: string): Promise<PublicGameState 
 export async function fetchPlayers(roomId: string) {
   const { data, error } = await supabase
     .from("players")
-    .select("player_id, display_name, player_type, avatar, seat_index, eliminated, connected, wins")
+    .select("player_id, display_name, player_type, avatar, seat_index, eliminated, connected, wins, device_id")
     .eq("room_id", roomId)
     .order("seat_index", { ascending: true });
   if (error) throw error;
   return data;
+}
+
+export async function fetchSeatLayout(roomId: string): Promise<string[] | null> {
+  const { data, error } = await supabase.from("room_seat_layout").select("seat_order").eq("room_id", roomId).maybeSingle();
+  if (error) throw error;
+  return (data?.seat_order as string[] | undefined) ?? null;
+}
+
+export async function setSeatLayout(deviceId: string, sessionToken: string, roomId: string, seatOrder: string[]): Promise<string[]> {
+  const { data, error } = await supabase.rpc("set_seat_layout", {
+    p_room_id: roomId,
+    p_device_id: deviceId,
+    p_session_token: sessionToken,
+    p_seat_order: seatOrder,
+  });
+  if (error) throw error;
+  return data as string[];
 }
 
 export type { CardColor };

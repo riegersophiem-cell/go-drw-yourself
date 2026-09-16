@@ -1,0 +1,119 @@
+/* Layer order within .game-table__surface (documented once, see
+   ActionChoreography.tsx's doc comment for the full stack): connection
+   paths render behind the traveling glyphs, both sit above PlayerRing/
+   DiscardStage but below ActionFocus's title/scrim. */
+.action-choreo {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  pointer-events: none;
+}
+
+/* ===== Hand Stack Glyph — "a hand of cards", not a debug rectangle =====
+   Three layered card-back leaves via box-shadow (no extra DOM cost): a
+   clear stack silhouette, subtle depth, no text, no borrowed card content. */
+.action-choreo__handstack {
+  position: absolute;
+  z-index: 3;
+  width: clamp(30px, 2.8vw, 40px);
+  height: clamp(40px, 3.8vw, 54px);
+  transform: translate(-50%, -50%);
+  transition: left .48s cubic-bezier(.4, .1, .3, 1), top .48s cubic-bezier(.4, .1, .3, 1);
+}
+.action-choreo__handstack-leaf {
+  position: absolute;
+  inset: 0;
+  border-radius: 5px;
+  background: linear-gradient(150deg, #2c3f5c 0%, #101f36 100%);
+  border: 1px solid rgba(255, 255, 255, .38);
+  box-shadow: 0 5px 10px rgba(0, 0, 0, .35);
+}
+.action-choreo__handstack-leaf:nth-child(1) { transform: translate(-4px, 2px) rotate(-9deg); z-index: 1; opacity: .82; }
+.action-choreo__handstack-leaf:nth-child(2) { transform: translate(3px, 1px) rotate(7deg); z-index: 2; opacity: .92; }
+.action-choreo__handstack-leaf:nth-child(3) {
+  z-index: 3;
+  background: linear-gradient(150deg, #34496a 0%, #142438 100%);
+  border-color: rgba(255, 255, 255, .55);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, .4);
+}
+.action-choreo__handstack-leaf:nth-child(3)::after {
+  content: "";
+  position: absolute;
+  inset: 22% 30%;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, .22);
+}
+
+/* ===== Card-back glyph — Draw/Stack animations ===== */
+.action-choreo__cardback {
+  position: absolute;
+  z-index: 3;
+  width: clamp(20px, 1.9vw, 27px);
+  height: clamp(28px, 2.7vw, 38px);
+  transform: translate(-50%, -50%);
+  border-radius: 4px;
+  background: linear-gradient(150deg, #2c3f5c 0%, #101f36 100%);
+  border: 1px solid rgba(255, 255, 255, .5);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, .35);
+  transition: left .55s cubic-bezier(.4, .1, .3, 1), top .55s cubic-bezier(.4, .1, .3, 1);
+}
+.action-choreo__cardback::after {
+  content: "";
+  position: absolute;
+  inset: 26% 32%;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, .2);
+}
+
+/* ===== Connection paths (TARGET/SKIP, SWAP) ===== */
+.action-choreo__link {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.action-choreo__target-line {
+  stroke-width: .55;
+  stroke-linecap: round;
+  stroke-dasharray: 1.6 2.4;
+  vector-effect: non-scaling-stroke;
+  opacity: .8;
+  filter: drop-shadow(0 0 2px currentColor);
+  animation: action-choreo-dash 1.1s linear infinite;
+}
+.action-choreo__swap-path {
+  fill: none;
+  stroke-width: .5;
+  stroke-linecap: round;
+  stroke-dasharray: 1.4 2.2;
+  vector-effect: non-scaling-stroke;
+  opacity: .6;
+  animation: action-choreo-dash 1.3s linear infinite;
+}
+
+.action-choreo__marker {
+  position: absolute;
+  z-index: 3;
+  width: 15px;
+  height: 15px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 2px solid #ef4444;
+  background: rgba(10, 16, 28, .5);
+  animation: action-choreo-marker-in .3s ease both;
+}
+
+@keyframes action-choreo-dash {
+  to { stroke-dashoffset: -8; }
+}
+@keyframes action-choreo-marker-in {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(.4); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .action-choreo__handstack, .action-choreo__cardback { transition-duration: .18s; }
+  .action-choreo__target-line, .action-choreo__swap-path { animation: none; }
+}

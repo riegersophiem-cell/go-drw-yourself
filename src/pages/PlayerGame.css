@@ -3,12 +3,8 @@
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) clamp(250px, 34vh, 360px);
   overflow: hidden;
-  color: #111827;
-  /* Stops pushed out (and the outer tone lightened) so the vignette never
-     plateaus into a visibly boxed-off panel behind the tall, expanded hand
-     dock at the bottom of the viewport - it only did with the collapsed
-     54px dock, which stayed inside the near-white center of the gradient. */
-  background: radial-gradient(ellipse at 50% 40%, rgba(255,255,255,.94) 0 45%, rgba(233,240,249,.85) 78%, rgba(219,229,240,.92) 100%), #dbe5f0;
+  color: var(--text-primary);
+  background: var(--bg-app);
 }
 .player-game--hand-collapsed { grid-template-rows: auto minmax(0, 1fr) 54px; }
 .player-game--turn-attention:before {
@@ -50,7 +46,7 @@
 }
 .player-game__brand span {
   width: 145px;
-  color: #536274;
+  color: var(--text-secondary);
   font-size: .62rem;
   line-height: 1.25;
 }
@@ -59,14 +55,14 @@
   display: flex;
   flex-direction: column;
   padding: 8px 18px;
-  border: 1px solid rgba(120,145,175,.18);
+  border: 1px solid var(--border-strong);
   border-radius: 14px;
   text-align: left;
-  background: rgba(225,235,247,.72);
-  box-shadow: inset 0 1px rgba(255,255,255,.7);
+  background: var(--bg-surface-muted);
+  box-shadow: inset 0 1px rgba(255,255,255,.07);
 }
 .player-game__room span {
-  color: #64748b;
+  color: var(--text-secondary);
   font-size: .56rem;
 }
 .player-game__room strong {
@@ -80,8 +76,8 @@
   align-items: center;
   padding: 10px 16px;
   border-radius: 16px;
-  color: #26364b;
-  background: rgba(211,224,239,.82);
+  color: var(--text-primary);
+  background: var(--bg-surface-muted);
 }
 .player-game__top-actions {
   justify-self: end;
@@ -93,33 +89,33 @@
 .player-game__view-switch {
   display: flex;
   padding: 3px;
-  border: 1px solid rgba(100,116,139,.18);
+  border: 1px solid var(--border-strong);
   border-radius: 13px;
-  background: rgba(225,235,247,.74);
+  background: var(--bg-surface-muted);
 }
 .player-game__view-switch button {
   padding: 7px 10px;
   border: 0;
   border-radius: 10px;
-  color: #52657a;
+  color: var(--text-secondary);
   background: transparent;
   box-shadow: none;
 }
 .player-game__view-switch button[aria-pressed="true"] {
-  color: #15263b;
-  background: rgba(255,255,255,.9);
-  box-shadow: 0 3px 10px rgba(42,67,98,.13);
+  color: var(--text-primary);
+  background: var(--bg-surface-elevated);
+  box-shadow: var(--shadow-soft);
 }
 .player-game__top-actions button,
 .player-game__spectator-note button {
   padding: 10px 16px;
-  border: 1px solid rgba(100,116,139,.24);
+  border: 1px solid var(--border-strong);
   border-radius: 14px;
-  color: #26364b;
+  color: var(--text-primary);
   font: inherit;
   font-size: .68rem;
   font-weight: 800;
-  background: rgba(225,235,247,.86);
+  background: var(--bg-surface-muted);
   cursor: pointer;
 }
 .player-game__board {
@@ -127,20 +123,13 @@
   grid-column: 1;
   min-height: 0;
 }
-.player-game__board > .table-board { background: transparent; }
-.player-game__board > .table-board { padding-top: 54px; }
-/* The table ring's crisp white border sits only ~3% of the board's height
-   above its bottom edge - fine in TableGame's standalone display, but here
-   the board's own bottom edge IS the seam against the hand dock, so that
-   border reads as the top edge of a boxed-off "window" around the cards
-   the moment the hand opens. Pulling the inset out alone wasn't enough:
-   its own drop-shadow (0 24px 70px) is a soft blur far wider than the
-   border itself, so it kept bleeding into the dock regardless. Drop the
-   outer shadow here and keep only a faint inward glow. */
-.player-game__board .table-board__rings {
-  inset: 8% 2% 11%;
-  box-shadow: inset 0 0 30px rgba(84,122,164,.07);
-}
+/* Must clear the absolutely-positioned topbar's actual rendered height (not
+   just approximate it) — the compact PlayerRing strip is the first in-flow
+   content of .game-table and sits flush to this padding's edge, so too
+   little clearance here overlaps the room-code chip with the first player
+   chip. Measured live: topbar is ~106px tall at desktop widths, ~78px at
+   the 760px mobile breakpoint (see the mobile override below). */
+.player-game__board > .game-table { background: transparent; padding-top: 116px; }
 
 .player-game__dock {
   position: relative;
@@ -148,23 +137,67 @@
   grid-row: 3;
   grid-column: 1;
   display: grid;
-  grid-template-columns: 160px minmax(0, 1fr) 190px;
+  grid-template-columns: minmax(0, 1fr) 168px;
   align-items: center;
   min-height: 0;
   padding: 30px 26px 6px;
-  border: 1px solid rgba(255,255,255,.38);
+  border: 1px solid var(--glass-border);
   border-bottom: 0;
   border-radius: 28px 28px 0 0;
-  color: #f8fafc;
-  background: rgba(255,255,255,.18);
-  box-shadow: 0 -16px 44px rgba(56,82,116,.1), inset 0 1px rgba(255,255,255,.52);
-  backdrop-filter: blur(14px) saturate(118%);
+  color: var(--text-inverse);
+  /* Light, milky, translucent in Light mode; a dark frosted glass panel in
+     Dark mode — never a dark solid block either way (brief section 7). */
+  background: var(--glass-bg);
+  box-shadow: 0 -16px 44px rgba(0,0,0,.12), inset 0 1px rgba(255,255,255,.1);
+  backdrop-filter: blur(18px) saturate(140%);
   isolation: isolate;
+  transition: grid-template-rows .2s ease;
 }
+/* Dock height follows the hand's own row count (brief section 19: 1 row
+   compact, 2 rows bigger, 3 rows noticeably bigger) instead of one fixed
+   height for every hand size — driven purely by the row-count class
+   PlayerHand already puts on itself, no extra JS wiring needed. */
+.player-game:has(.player-hand--rows-2) { grid-template-rows: auto minmax(0, 1fr) clamp(280px, 38vh, 400px); }
+.player-game:has(.player-hand--rows-3) { grid-template-rows: auto minmax(0, 1fr) clamp(310px, 42vh, 440px); }
+/* A Major Action briefly claims more of the screen for the public table —
+   the hand dock recedes but stays present, and reverts automatically the
+   moment `playback.active` clears (brief section 22). Excluded in hand-only:
+   there is no visible public table to grow into there (see below), so
+   shrinking the dock would only pointlessly crowd the player's own hand
+   during exactly the moment they need to see it clearly. */
+.player-game:has(.game-table--focus-severity-major):not(.player-game--hand-only) { grid-template-rows: auto minmax(0, 1fr) clamp(150px, 20vh, 210px) !important; }
+.player-game:has(.game-table--focus-severity-major):not(.player-game--hand-only) .player-game__dock { padding-top: 12px; }
+/* !important: without it, the row-count-driven dock-height rules above
+   (`:has(.player-hand--rows-2/3)`, 2 classes) outrank this single-class
+   selector and silently override hand-only's full-screen dock the moment
+   the player's hand grows past 10/20 cards — found while re-checking this
+   mode after the mobile hand-dock changes, not something hand-only itself
+   ever did wrong. */
 .player-game--hand-only {
-  grid-template-rows: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) !important;
 }
-.player-game--hand-only .player-game__board { display: none; }
+/* The public-table board is never SHOWN in hand-only (that's the whole
+   point — a separate TABLE_DEVICE already displays it), but it must stay
+   mounted and visible-in-the-DOM-sense: GameTable also renders ActionFocus,
+   and a plain `display:none` on this wrapper would have taken ActionFocus
+   down with it — silently dropping all Standard/Major Action feedback
+   (found while re-checking this mode: "Major/Standard Actions für die
+   eigene Hand verständlich" was actually broken, not just unverified).
+   Instead, only the actual table content (ring/orbit/discard) is hidden via
+   `.game-table__surface { visibility:hidden }` below, while this wrapper
+   becomes a full-viewport, click-through overlay so ActionFocus's headline/
+   scrim/skip-button still render on top of the hand whenever an action is
+   in progress. */
+.player-game--hand-only .player-game__board {
+  position: fixed;
+  inset: 0;
+  z-index: 15;
+  pointer-events: none;
+}
+.player-game--hand-only .game-table__surface,
+.player-game--hand-only .game-table__seat-edit-toggle {
+  visibility: hidden;
+}
 .player-game--hand-only .player-game__dock {
   grid-row: 1;
   padding-top: 104px;
@@ -181,14 +214,14 @@
   align-items: center;
   gap: 10px;
   padding: 8px 14px;
-  border: 1px solid rgba(255,255,255,.55);
+  border: 1px solid var(--glass-border);
   border-radius: 999px;
-  color: #26364b;
-  background: rgba(242,247,252,.78);
-  box-shadow: 0 8px 22px rgba(46,71,103,.12);
+  color: var(--text-primary);
+  background: var(--bg-surface-elevated);
+  box-shadow: var(--shadow-soft);
   white-space: nowrap;
 }
-.player-game__hand-only-status span { color: #64748b; font-size: .68rem; }
+.player-game__hand-only-status span { color: var(--text-secondary); font-size: .68rem; }
 .player-game__hand-toggle {
   position: absolute;
   z-index: 20;
@@ -196,14 +229,14 @@
   left: 50%;
   transform: translateX(-50%);
   padding: 6px 16px;
-  border: 1px solid rgba(100,116,139,.28);
+  border: 1px solid var(--border-strong);
   border-radius: 999px;
-  color: #26364b;
+  color: var(--text-primary);
   font: inherit;
   font-size: .64rem;
   font-weight: 850;
-  background: rgba(238,244,251,.92);
-  box-shadow: 0 5px 14px rgba(41,72,111,.16);
+  background: var(--bg-surface-elevated);
+  box-shadow: var(--shadow-soft);
   cursor: pointer;
 }
 .player-game--hand-collapsed .player-game__dock {
@@ -211,7 +244,6 @@
   min-height: 54px;
   padding: 0;
 }
-.player-game__sort,
 .player-game__draw,
 .player-game__play,
 .player-game__retry button,
@@ -226,19 +258,35 @@
   box-shadow: inset 0 1px rgba(255,255,255,.12), 0 8px 18px rgba(0,0,0,.18);
   cursor: pointer;
 }
+/* Tertiary and small, docked directly at the hand instead of a full-size
+   floating button in its own far column (brief section 18). */
 .player-game__sort {
-  justify-self: start;
-  padding: 13px 20px;
+  position: absolute;
+  z-index: 5;
+  top: -2px;
+  left: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: .58rem;
+  font-weight: 800;
+  background: var(--bg-surface-elevated);
+  box-shadow: var(--shadow-soft);
+  cursor: pointer;
 }
-.player-game__sort span {
-  margin-right: 8px;
-  font-size: 1rem;
-}
+.player-game__sort span { font-size: .78rem; }
 .player-game__sort--active {
-  border-color: #58a1ff;
-  color: #8cc1ff;
+  border-color: var(--accent-info);
+  color: var(--accent-info);
+  background: color-mix(in srgb, var(--accent-info) 16%, var(--bg-surface-elevated));
 }
 .player-game__hand-wrap {
+  position: relative;
   min-width: 0;
   align-self: end;
   transition: opacity .18s, filter .18s;
@@ -263,6 +311,12 @@
   color: #312200;
   background: linear-gradient(180deg, #ffe56a, #ffc638);
   box-shadow: 0 0 24px rgba(255,193,42,.42), inset 0 1px rgba(255,255,255,.72);
+}
+/* Contextual primary state: once a legal card is selected, Play is the one
+   clear next step (brief section 17) — a touch more lift/glow than its
+   always-available disabled-until-selected baseline above. */
+.player-game__play--ready:not(:disabled) {
+  box-shadow: 0 0 30px rgba(255,193,42,.6), inset 0 1px rgba(255,255,255,.8);
 }
 .player-game__actions span { margin-right: 9px; }
 .player-game button:disabled {
@@ -300,9 +354,9 @@
   gap: 12px;
   padding: 10px 14px;
   border-radius: 18px;
-  color: #23344b;
-  background: rgba(241,246,252,.94);
-  box-shadow: 0 10px 28px rgba(35,58,88,.2);
+  color: var(--text-primary);
+  background: var(--bg-surface-elevated);
+  box-shadow: var(--shadow-elevated);
 }
 .player-game__spectator-note span { font-size: .7rem; }
 .player-game__retry {
@@ -351,27 +405,46 @@
   .player-game__meta {
     display: none;
   }
+  /* Room code and Leave are secondary chrome on a phone — the table itself
+     is the content (brief follow-up: "noch kleiner/sekundärer" then "wirkt
+     eher wie Utility-Text als wie bewusstes Top-Chrome"). Small glass-pill
+     chips (same translucent language as the hand dock/sort chip) instead of
+     either a card-like box or a bare underlined link — reads as deliberate
+     chrome, not leftover debug text, while staying visually quiet. */
   .player-game__room {
     justify-self: start;
-    padding: 5px 10px;
+    flex-direction: row;
+    align-items: baseline;
+    gap: 5px;
+    padding: 5px 12px;
+    border-radius: 999px;
+    background: var(--bg-surface);
+    backdrop-filter: blur(10px);
+    box-shadow: var(--shadow-soft);
   }
-  .player-game__top-actions { gap: 4px; }
+  .player-game__room span { font-size: .48rem; letter-spacing: .04em; text-transform: uppercase; }
+  .player-game__room strong { font-size: .68rem; letter-spacing: .05em; }
+  .player-game__top-actions { gap: 6px; }
   .player-game__view-switch { position: fixed; left: 50%; top: 8px; transform: translateX(-50%); }
   .player-game__view-switch button { padding: 6px 8px; font-size: .5rem; }
-  .player-game__top-actions button { padding: 7px 9px; font-size: .56rem; }
+  .player-game__top-actions button {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 999px;
+    color: var(--text-secondary);
+    font-size: .54rem;
+    font-weight: 750;
+    background: var(--bg-surface-muted);
+    backdrop-filter: blur(10px);
+    box-shadow: var(--shadow-soft);
+  }
   .player-game__dock {
-    grid-template-columns: 56px minmax(0, 1fr) 70px;
-    padding: 28px 4px 2px;
+    grid-template-columns: minmax(0, 1fr) 72px;
+    padding: 26px 4px 2px;
   }
   .player-game__sort {
-    width: 52px;
-    height: 52px;
-    padding: 5px;
-    font-size: .58rem;
-  }
-  .player-game__sort span {
-    display: block;
-    margin: 0;
+    padding: 4px 8px;
+    font-size: .5rem;
   }
   .player-game__actions { gap: 8px; }
   .player-game__play,
@@ -384,7 +457,7 @@
     display: block;
     margin: 0;
   }
-  .player-game__board > .table-board { padding-top: 42px; }
+  .player-game__board > .game-table { padding-top: 88px; }
   .player-game__choice {
     top: 8px;
     max-width: 80%;
@@ -396,9 +469,23 @@
     justify-content: center;
     flex-wrap: wrap;
   }
-  .player-game--hand-only .player-game__dock { padding-top: 96px; grid-template-columns: 52px minmax(0,1fr) 68px; }
-  .player-game__hand-only-status { top: 54px; max-width: calc(100% - 24px); box-sizing: border-box; }
-  .player-game__hand-only-status span { display: none; }
+  .player-game--hand-only .player-game__dock { padding-top: 96px; grid-template-columns: minmax(0,1fr) 68px; }
+  /* Stacked instead of side-by-side (and, previously, the second line simply
+     hidden) — the pending-draw-stack line in particular is exactly the kind
+     of "Action betrifft mich" info hand-only must not lose (brief follow-up
+     section on PLAYER_HAND_ONLY); it just doesn't fit next to the first
+     line at phone width without wrapping oddly. */
+  .player-game__hand-only-status {
+    top: 54px;
+    flex-direction: column;
+    gap: 2px;
+    max-width: calc(100% - 24px);
+    box-sizing: border-box;
+    white-space: normal;
+    text-align: center;
+  }
+  .player-game__hand-only-status strong { font-size: .82rem; }
+  .player-game__hand-only-status span { font-size: .6rem; }
 }
 
 @media (max-height: 700px) {
@@ -407,6 +494,86 @@
   .player-game__dock { padding-top: 14px; }
   .player-game__topbar { padding-top: 7px; }
   .player-game__brand span { display: none; }
+}
+
+/* Short PORTRAIT viewports only (e.g. a phone with an on-screen keyboard
+   eating vertical space) — genuine landscape phones now get their own
+   dedicated side-by-side reflow below, which needs full player info to stay
+   readable (brief follow-up: "Name/Kartenzahl/Active-State sollten noch
+   schnell lesbar bleiben"). This block used to also fire in landscape
+   (max-height alone can't tell landscape from a short portrait viewport),
+   which silently hid every seat's name+count there — found live via user
+   feedback, not a screenshot, since the collapsed text wasn't itself broken,
+   just missing. */
+@media (max-height: 450px) and (orientation: portrait) {
+  .player-game { grid-template-rows: auto minmax(84px, 1fr) 170px; }
+  .player-game__board > .game-table { padding-top: 58px; }
+  .game-table--remote_mobile_full .game-table__surface { max-height: 34vh; }
+  .player-ring__seat--compact .player-ring__avatar { width: 26px; height: 26px; }
+  .player-ring__seat--compact .player-ring__copy { display: none; }
+}
+
+/* Mobile Landscape (brief section 31): a real side-by-side reflow, not
+   Portrait squeezed shorter — Public Table keeps the left/main area, the
+   hand dock becomes a right-hand column instead of a bottom band, so hand
+   cards get real height to work with instead of being cropped by a short
+   viewport. Targets landscape phones specifically (short height, wide
+   enough to fit both columns) — tablets/desktop landscape stay on the
+   normal Portrait-style stacked layout since they have height to spare. */
+@media (orientation: landscape) and (max-height: 500px) and (min-width: 560px) {
+  .player-game,
+  .player-game:has(.player-hand--rows-2),
+  .player-game:has(.player-hand--rows-3) {
+    grid-template-columns: minmax(0, 1fr) minmax(220px, 34vw);
+    grid-template-rows: 100%;
+  }
+  .player-game--hand-collapsed { grid-template-columns: minmax(0, 1fr) 60px; }
+  .player-game__board { grid-column: 1; grid-row: 1; }
+  .player-game__board > .game-table { padding-top: 46px; }
+  /* The portrait 44vh cap (GameTable.css) is far too short here — the board
+     column already gets the viewport's full height in landscape, and a
+     short surface squeezes the compact ellipse's vertical radius down to
+     where the top/bottom seats collide with the discard/draw pair (found
+     live at 844x390: Sophie's avatar overlapping the discard card). Extra
+     specificity (3 classes) wins over GameTable.css's rule regardless of
+     stylesheet import order. */
+  .player-game .game-table--remote_mobile_full .game-table__surface { max-height: none; min-height: 260px; }
+  /* The desktop-width brand block (two text lines) doesn't clear the
+     compact ring at this short height — hidden here the same way the
+     portrait ≤760px breakpoint already hides it, since 844x390-class
+     phones are just as narrow-feeling in landscape (found live: "YOURSELF"
+     overlapping the first player chip's name). */
+  .player-game__brand, .player-game__meta { display: none; }
+  /* A touch larger than the portrait compact defaults — landscape seats
+     have a bit more room per seat, and staying quickly legible matters more
+     here since several actions can play out while remote (brief follow-up
+     section 3). */
+  .player-ring__seat--compact .player-ring__name { font-size: .56rem; max-width: 76px; }
+  .player-ring__seat--compact .player-ring__count { font-size: .46rem; }
+  .player-game__topbar { padding: 8px 10px; }
+  .player-game__room { flex-direction: row; align-items: baseline; gap: 5px; padding: 4px 10px; border-radius: 999px; background: var(--bg-surface); backdrop-filter: blur(10px); box-shadow: var(--shadow-soft); }
+  .player-game__room span { font-size: .46rem; letter-spacing: .04em; text-transform: uppercase; }
+  .player-game__room strong { font-size: .64rem; letter-spacing: .05em; }
+  .player-game__top-actions button { padding: 5px 10px; border: none; border-radius: 999px; color: var(--text-secondary); font-size: .5rem; font-weight: 750; background: var(--bg-surface-muted); backdrop-filter: blur(10px); box-shadow: var(--shadow-soft); }
+  .player-game__dock {
+    grid-column: 2;
+    grid-row: 1;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    height: 100%;
+    padding: 40px 10px 10px;
+    border-radius: 0 0 0 26px;
+    border-left: 1px solid var(--glass-border);
+    border-bottom: 1px solid var(--glass-border);
+    border-top: 0;
+    overflow-y: auto;
+  }
+  .player-game--hand-collapsed .player-game__dock { display: flex; align-items: flex-start; justify-content: center; }
+  .player-game__hand-wrap { grid-row: 2; align-self: center; }
+  .player-game__actions { grid-row: 3; flex-direction: row; gap: 6px; }
+  .player-game__play, .player-game__draw { min-height: 40px; padding: 6px 4px; font-size: .5rem; }
+  .player-game__hand-toggle { position: static; margin: 0 auto 6px; transform: none; }
+  .player-game__hand-only-status { max-width: calc(100% - 16px); }
 }
 
 @media (prefers-reduced-motion: reduce) {

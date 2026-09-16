@@ -9,7 +9,12 @@ export type GameErrorCode =
   | "INVALID_SKIP_TARGET"
   | "UNKNOWN_PLAYER"
   | "STALE_GAME_STATE"
-  | "GAME_ALREADY_OVER";
+  | "GAME_ALREADY_OVER"
+  | "UNKNOWN_DEVICE"
+  | "INVALID_SESSION"
+  | "ROOM_NOT_FOUND"
+  | "ROOM_NOT_JOINABLE"
+  | "ROOM_FULL";
 
 const MESSAGES: Record<GameErrorCode, string> = {
   NOT_YOUR_TURN: "Du bist noch nicht dran.",
@@ -23,6 +28,15 @@ const MESSAGES: Record<GameErrorCode, string> = {
   UNKNOWN_PLAYER: "Unbekannter Spieler.",
   STALE_GAME_STATE: "Der Spielstand hat sich geändert. Bitte synchronisieren.",
   GAME_ALREADY_OVER: "Das Spiel ist bereits beendet.",
+  // Session/reconnect codes (see LOBBY_SESSION_FLOW_REPORT.md — thrown by
+  // authenticateDevice on the server; surfaced here so any endpoint that
+  // propagates the real code instead of wrapping it gets a friendly message
+  // "for free" via api.ts's existing code -> message lookup).
+  UNKNOWN_DEVICE: "Diese Sitzung ist nicht mehr gültig. Bitte tritt dem Raum erneut bei.",
+  INVALID_SESSION: "Diese Sitzung ist abgelaufen. Bitte tritt dem Raum erneut bei.",
+  ROOM_NOT_FOUND: "Kein Raum mit diesem Code gefunden.",
+  ROOM_NOT_JOINABLE: "Diesem Raum kann gerade nicht mehr beigetreten werden.",
+  ROOM_FULL: "Dieser Raum ist voll.",
 };
 
 export class GameError extends Error {

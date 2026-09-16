@@ -20,6 +20,21 @@
     <meta name="twitter:description" content="Swap it. Stack it. Make it someone else's problem." />
     <meta name="twitter:image" content="https://go-drw-yourself.vercel.app/share-preview.png" />
     <title>GO DR*W YOURSELF</title>
+    <script>
+      // Resolves the stored theme mode (light/dark/system) to a concrete
+      // data-theme before any CSS paints, so a saved Dark preference never
+      // flashes Light first (DARK_MODE_IMPLEMENTATION_REPORT.md section 14).
+      // Mirrors ThemeProvider's own resolution logic exactly - kept in sync
+      // by hand since this must run standalone, before React/modules load.
+      (function () {
+        try {
+          var stored = localStorage.getItem("gdy_theme");
+          var mode = stored === "light" || stored === "dark" || stored === "system" ? stored : "system";
+          var resolved = mode === "system" ? (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light") : mode;
+          document.documentElement.setAttribute("data-theme", resolved);
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

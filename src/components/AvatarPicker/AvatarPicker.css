@@ -11,16 +11,16 @@
   position: relative;
   aspect-ratio: 3 / 4;
   padding: 0;
-  border: 2px solid #3f3f46;
+  border: 2px solid var(--border-strong);
   border-radius: 10px;
   overflow: hidden;
-  background: #27272a;
+  background: var(--bg-surface);
   cursor: pointer;
 }
 
 .avatar-option--selected {
-  border-color: #facc15;
-  box-shadow: 0 0 0 2px rgba(250, 204, 21, 0.35);
+  border-color: var(--accent-gold-solid);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-gold-solid) 40%, transparent);
 }
 
 .avatar-option__img {

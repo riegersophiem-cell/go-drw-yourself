@@ -1,4 +1,4 @@
-import { drawAmountOf, isWildDefinition } from "./cards.ts";
+import { drawAmountOf, isDrawCard, isTerminalDrawCard, isWildDefinition } from "./cards.ts";
 import { shuffle } from "./deck.ts";
 import { GameError } from "./errors.ts";
 import { rotateHandsAllPlayers, swapHands } from "./effects.ts";
@@ -10,11 +10,14 @@ import { DEFAULT_RULESET, type CardColor, type CardDefinition, type GameState, t
 export function isPlayable(card: CardDefinition, state: GameState, ruleset: RulesetConfig = DEFAULT_RULESET): boolean {
   if (state.phase === "GAME_OVER") return false;
 
-  // Under an active draw stack, only cards that extend the stack are legal
-  // (if stacking is enabled); everything else must draw instead of playing.
+  // Under an active draw stack, only a draw card whose own value is at least
+  // the most recently played card's value may top it (ACTION_CHAOS_LIFECYCLE
+  // spec section 8: compared against lastDrawValue, never the cumulative
+  // total) — and never once a Chaos terminal draw has locked the stack.
   if (state.pendingEffect?.type === "DRAW_STACK") {
     if (!ruleset.drawStackingEnabled) return false;
-    return state.pendingEffect.allowedResponseDefIds.includes(card.defId) || isSameStackFamily(card, state);
+    if (state.pendingEffect.terminal) return false;
+    return isDrawCard(card) && drawAmountOf(card) >= state.pendingEffect.lastDrawValue;
   }
 
   if (isWildDefinition(card)) return true;
@@ -29,15 +32,6 @@ export function isPlayable(card: CardDefinition, state: GameState, ruleset: Rule
   if (card.type === top.type) return true;
 
   return false;
-}
-
-function isSameStackFamily(card: CardDefinition, state: GameState): boolean {
-  // Any card of matching draw-type may usually be stacked (e.g. Draw 2 on
-  // Draw 2). Cross-type stacking (Draw 2 on Wild Draw 4) is
-  // TODO_VERIFY_OFFICIAL_RULE and disabled by default here.
-  if (state.pendingEffect?.type !== "DRAW_STACK") return false;
-  const allowedDefs = state.pendingEffect.allowedResponseDefIds.map((id) => state.cardDefinitions[id]);
-  return allowedDefs.some((d) => d.type === card.type);
 }
 
 export function getLegalMoves(state: GameState, playerId: string, ruleset: RulesetConfig = DEFAULT_RULESET): string[] {
@@ -131,6 +125,16 @@ export function playCard(
   let working = removeFromHand(state, playerId, instanceId);
   working = { ...working, discardPile: [...working.discardPile, instanceId] };
 
+  // WILD_COLOR_ROULETTE (ACTION_CHAOS_LIFECYCLE spec section 20): no player
+  // or bot color choice exists for this card at all — the engine alone picks
+  // the next player, the active color, and forces direction=CLOCKWISE, all
+  // server-authoritative. Must be checked before the generic isWildDefinition
+  // branch below, which would otherwise defer to a human/bot color choice.
+  if (def.type === "WILD_COLOR_ROULETTE") {
+    working = applyColorRoulette(working, rng);
+    return finalizePlay(working, playerId, def, { skipTurnAdvance: true }, ruleset, rng);
+  }
+
   if (isWildDefinition(def)) {
     if (!options.chosenColor) {
       // Defer: caller must follow up with CHOOSE_COLOR before the turn advances.
@@ -143,6 +147,22 @@ export function playCard(
   }
 
   return finalizePlay(working, playerId, def, {}, ruleset, rng);
+}
+
+const ROULETTE_COLORS: Exclude<CardColor, "WILD">[] = ["RED", "BLUE", "GREEN", "YELLOW", "VIOLET"];
+
+/**
+ * COLOR ROULETTE's three simultaneous results (spec section 20): a random
+ * active player becomes current player, a random one of the 5 regular
+ * colors becomes active, and direction is forced to CLOCKWISE (1) regardless
+ * of whatever it was before. All three are decided here, server-side, before
+ * any presentation reads the result — RNG never lives in the client.
+ */
+function applyColorRoulette(state: GameState, rng: () => number): GameState {
+  const active = state.players.filter((p) => !p.eliminated);
+  const randomPlayer = active[Math.floor(rng() * active.length)];
+  const randomColor = ROULETTE_COLORS[Math.floor(rng() * ROULETTE_COLORS.length)];
+  return { ...state, direction: 1, currentPlayerId: randomPlayer.playerId, activeColor: randomColor };
 }
 
 /** Continuation of playCard() once a WILD card's color is known (chosen or deferred). */
@@ -168,7 +188,7 @@ function finalizePlay(
   state: GameState,
   playerId: string,
   def: CardDefinition,
-  opts: { deferColor?: boolean },
+  opts: { deferColor?: boolean; skipTurnAdvance?: boolean },
   ruleset: RulesetConfig,
   rng: () => number,
 ): PlayCardResult {
@@ -182,6 +202,16 @@ function finalizePlay(
 
   if (opts.deferColor) {
     return { state: working, requiresColorChoice: true, requiresSwapTarget: false, requiresSkipTarget: false, requiresExtraDiscard: false };
+  }
+
+  // COLOR ROULETTE already set currentPlayerId/activeColor/direction directly
+  // (applyColorRoulette) — the generic turn-advance below must not run, since
+  // there's no "steps from the actor" to walk here, just an already-decided
+  // random destination.
+  if (opts.skipTurnAdvance) {
+    working = { ...working, turnNumber: working.turnNumber + 1, phase: "WAITING_FOR_PLAY" };
+    working = applyMercyRule(working, ruleset);
+    return { state: working, requiresColorChoice: false, requiresSwapTarget: false, requiresSkipTarget: false, requiresExtraDiscard: false };
   }
 
   // SWAP_HAND (ex "7"): defer to a follow-up CHOOSE_SWAP_TARGET action.
@@ -332,6 +362,7 @@ function applyImmediateEffectsAndAdvance(
       break;
     case "DRAW_1":
     case "DRAW_2":
+    case "DRAW_4":
     case "WILD_DRAW_4":
     case "WILD_DRAW_6":
     case "WILD_DRAW_10":
@@ -379,25 +410,29 @@ function applyImmediateEffectsAndAdvance(
 }
 
 /**
- * GIVE_TWO_TO_LOWEST (ex "5"): the active player with the fewest cards at
- * resolution time draws 2, immediately and unconditionally (not stacked).
- * Ties: TODO_DEFINE_LOWEST_HAND_TIE_RULE — the brief explicitly forbids
- * inventing a rule here, so ties are broken deterministically by seat order
- * as a placeholder only.
+ * GIVE_TWO_TO_LOWEST (ex "5"): the active player(s) with the fewest cards at
+ * resolution time draw immediately and unconditionally (not stacked) —
+ * ACTION_CHAOS_LIFECYCLE spec section 6: exactly one player with the lowest
+ * hand draws +2; two or more tied at the lowest count each draw +1 instead.
+ * Resolution (who's tied, how many they each draw) is fully determined
+ * before any card moves, per section 0's engine-decides-then-presentation
+ * ordering.
  */
 function applyGiveTwoToLowest(state: GameState, rng: () => number): GameState {
   const active = state.players.filter((p) => !p.eliminated);
   if (active.length === 0) return state;
 
-  let lowest = active[0];
-  for (const p of active) {
-    const count = state.hands[p.currentHandId].cardInstanceIds.length;
-    const lowestCount = state.hands[lowest.currentHandId].cardInstanceIds.length;
-    if (count < lowestCount) lowest = p;
-  }
+  const counts = active.map((p) => ({ playerId: p.playerId, count: state.hands[p.currentHandId].cardInstanceIds.length }));
+  const min = Math.min(...counts.map((c) => c.count));
+  const lowestPlayerIds = counts.filter((c) => c.count === min).map((c) => c.playerId);
+  const amountEach = lowestPlayerIds.length === 1 ? 2 : 1;
 
-  const { state: drawnState, drawn } = drawInstances(state, 2, rng);
-  return addToHand(drawnState, lowest.playerId, drawn);
+  let working = state;
+  for (const playerId of lowestPlayerIds) {
+    const { state: drawnState, drawn } = drawInstances(working, amountEach, rng);
+    working = addToHand(drawnState, playerId, drawn);
+  }
+  return working;
 }
 
 function applyDrawEffect(state: GameState, playerId: string, def: CardDefinition, ruleset: RulesetConfig, rng: () => number): GameState {
@@ -405,22 +440,22 @@ function applyDrawEffect(state: GameState, playerId: string, def: CardDefinition
   const nextId = getNextPlayerId(state, playerId, 1);
 
   if (ruleset.drawStackingEnabled) {
-    const family = sameFamilyDefIds(state, def);
     const existing = state.pendingEffect?.type === "DRAW_STACK" ? state.pendingEffect.amount : 0;
+    const alreadyTerminal = state.pendingEffect?.type === "DRAW_STACK" && state.pendingEffect.terminal;
     return {
       ...state,
-      pendingEffect: { type: "DRAW_STACK", amount: existing + amount, sourcePlayerId: playerId, allowedResponseDefIds: family },
+      pendingEffect: {
+        type: "DRAW_STACK",
+        amount: existing + amount,
+        lastDrawValue: amount,
+        terminal: alreadyTerminal || isTerminalDrawCard(def),
+        sourcePlayerId: playerId,
+      },
     };
   }
 
   const { state: drawn, drawn: instanceIds } = drawInstances(state, amount, rng);
   return addToHand(drawn, nextId, instanceIds);
-}
-
-function sameFamilyDefIds(state: GameState, def: CardDefinition): string[] {
-  return Object.values(state.cardDefinitions)
-    .filter((d) => d.type === def.type)
-    .map((d) => d.defId);
 }
 
 function applyDiscardAll(state: GameState, playerId: string): GameState {

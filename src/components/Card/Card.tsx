@@ -1,5 +1,5 @@
 import type { CardDefinition } from "../../game/types";
-import { cardArtUrl, cardBackUrl, getCardArt } from "./cardArt";
+import { cardArtPngUrl, cardBackPngUrl, getCardArt } from "./cardArt";
 import "./Card.css";
 
 const GEOMETRY_TYPES = new Set(["TRIANGLE", "SQUARE", "CIRCLE", "DIAMOND", "SEMICIRCLE"]);
@@ -19,16 +19,29 @@ export interface CardProps {
   onClick?: () => void;
 }
 
+// The final PNG art (see cardArt.ts / CARD_ASSET_UPDATE_REPORT.md) is the
+// only card art source now — no SVG counterpart exists for it, so this
+// component renders a plain <img>, not the old <picture>/<source> pair that
+// used to prefer an SVG and fall back to PNG.
 export function Card({ def, playable = true, selected = false, faceDown = false, display = false, size = "normal", onClick }: CardProps) {
   if (faceDown) {
-    return <img className={`uno-card uno-card--back uno-card--${size}`} src={cardBackUrl} alt="" aria-label="verdeckte Karte" />;
+    return (
+      <span className={`uno-card uno-card--back uno-card--${size}`}>
+        <img className="uno-card__art" src={cardBackPngUrl} alt="" aria-label="verdeckte Karte" />
+      </span>
+    );
   }
 
   const art = getCardArt(def.color, def.type);
   const accessibleName = `${def.color !== "WILD" ? def.color + " " : ""}${art.displayName} – ${art.subtitle}`;
+  const artUrl = cardArtPngUrl(def.color, def.type);
 
   if (display) {
-    return <img className={`uno-card uno-card--${size}`} src={cardArtUrl(def.color, def.type)} alt="" aria-label={accessibleName} />;
+    return (
+      <span className={`uno-card uno-card--${size}`}>
+        <img className="uno-card__art" src={artUrl} alt="" aria-label={accessibleName} />
+      </span>
+    );
   }
 
   return (
@@ -40,7 +53,7 @@ export function Card({ def, playable = true, selected = false, faceDown = false,
       title={accessibleName}
       aria-label={accessibleName}
     >
-      <img className="uno-card__art" src={cardArtUrl(def.color, def.type)} alt="" />
+      <img className="uno-card__art" src={artUrl} alt="" />
       {selected && !GEOMETRY_TYPES.has(def.type) && (
         <span className="uno-card__caption" aria-hidden="true">
           <strong>{def.color !== "WILD" ? def.color + " · " : ""}{art.displayName}</strong>

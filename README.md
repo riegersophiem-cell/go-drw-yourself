@@ -60,26 +60,64 @@ Ein Supabase-Projekt ist bereits eingerichtet und voll funktionsfähig:
 
 `npm install` ist bereits ausgeführt. Einfach `npm run dev` starten.
 
-### UI-/UX-Upgrade (Kartensystem-Overhaul)
+### Spielregeln (Farben, Kartenfamilien, Deckzusammensetzung)
 
 Das Spiel wurde gemäß dem `UNO_No_Mercy_UI_UX_Final_Claude_Brief.pdf` auf ein
 neues Karten-/Symbolsystem umgestellt — die ehemaligen Zahlenkarten 0–9 zeigen
-keine Ziffern mehr, siehe `src/game/types.ts` (`CardType`-Dokumentation) für
-die vollständige Zuordnung:
+keine Ziffern mehr. Interne Typ-Bezeichner (`CardType` in `src/game/types.ts`)
+sind aus den ursprünglichen Zahlenkarten abgeleitet und bleiben unverändert
+(Umbenennung würde in Asset-Dateinamen durchschlagen); maßgeblich für Spieler
+sind die Anzeigenamen.
 
-| Alter Slot | Neuer Typ | Funktion |
+**5 reguläre Spielfarben:** Rot, Blau, Grün, Gelb und **Violett** (`#7047EB`).
+Violett ist eine vollwertige reguläre Farbe — überall gleichbehandelt wie die
+anderen vier (Matching, Farbwahl, Validierung, Deckgenerierung, Bot-Logik).
+
+Es gibt drei Kartenfamilien:
+
+**BASIC** (4 Typen, je 5 Farben × 4 Kopien = 20, insgesamt 80) — reine
+Matching-Karten ohne Effekt:
+
+| Anzeigename | interner Typ |
+|---|---|
+| PASS | `TRIANGLE` |
+| LINK | `SQUARE` |
+| PULSE | `CIRCLE` |
+| ARC | `SEMICIRCLE` |
+
+**CORE ACTION** (4 Typen, je 5 Farben × 2 Kopien = 10, insgesamt 40):
+
+| Anzeigename | interner Typ | Funktion |
 |---|---|---|
-| 0 | `ROTATE_HANDS` | alle Hände rotieren in Spielrichtung |
-| 1/2/3/8/9 | `TRIANGLE`/`SQUARE`/`CIRCLE`/`DIAMOND`/`SEMICIRCLE` | normale Symbolkarte, kein Effekt |
-| 4 | `TARGET_SKIP` | gewählter Spieler setzt seinen **nächsten eigenen** Zug aus (persistiert über `pendingSkipTargets`, überlebt Reconnect) |
-| 5 | `GIVE_TWO_TO_LOWEST` | Spieler mit den wenigsten Karten zieht automatisch 2 (Gleichstand: `TODO_DEFINE_LOWEST_HAND_TIE_RULE`, aktuell Sitzreihenfolge) |
-| 6 | `DISCARD_ONE_EXTRA` | danach eine zusätzliche Karte wirkungslos abwerfen (eigener `DISCARD_EXTRA_CARD`-Action-Pfad, umgeht die normale Effekt-Pipeline bewusst) |
-| 7 | `SWAP_HAND` | komplette Hand mit gewähltem Spieler tauschen |
+| SHOVE | `DIAMOND` | **TODO_DEFINE_SHOVE_EFFECT** — kein Effekt definiert, verhält sich aktuell wie eine reine Matching-Karte |
+| TARGET | `TARGET_SKIP` | gewählter Spieler setzt seinen **nächsten eigenen** Zug aus (persistiert über `pendingSkipTargets`, überlebt Reconnect) |
+| LOWEST | `GIVE_TWO_TO_LOWEST` | Spieler mit den wenigsten Karten zieht automatisch 2 (Gleichstand: `TODO_DEFINE_LOWEST_HAND_TIE_RULE`, aktuell Sitzreihenfolge) |
+| DITCH | `DISCARD_ONE_EXTRA` | danach eine zusätzliche Karte wirkungslos abwerfen (eigener `DISCARD_EXTRA_CARD`-Action-Pfad, umgeht die normale Effekt-Pipeline bewusst) |
 
-Aktionskarten bekommen einen dezenten holografischen Rand/Glow (`Card.css`
-`.uno-card--action`) zur klaren visuellen Abgrenzung von reinen Symbolkarten.
-Jede Karte trägt einen `aria-label`/`title` mit Klartext-Bedeutung
-(Abschnitt 27 des Briefs).
+Weitere reguläre (farbige, nicht Chaos) Action-Karten ohne Farbwahl:
+`DRAW_1`/`DRAW_2`/`DRAW_4`/`SKIP`/`REVERSE`/`DISCARD_ALL` (DROP ALL). Deren
+genaue Kopienzahlen sind teils `TODO_VERIFY_OFFICIAL_RULE` bzw. für `DRAW_4`
+`TODO_DEFINE_COLORED_ACTION_COPY_COUNT` (siehe `src/game/cards.ts`).
+
+**CHAOS** (farblos — keine feste Ausgangsfarbe, immer spielbar, erzwingt bei
+jeder Auflösung zuerst eine neue reguläre Farbwahl):
+
+| Anzeigename | interner Typ | Ablauf |
+|---|---|---|
+| SWAP | `SWAP_HAND` | Farbe wählen → dann Zielspieler wählen → komplette Hand tauschen → gewählte Farbe bleibt aktiv |
+| ROTATE | `ROTATE_HANDS` | Farbe wählen → dann rotieren alle aktiven Hände (Bots eingeschlossen) gleichzeitig in Spielrichtung → gewählte Farbe bleibt aktiv |
+| SKIP ALL | `SKIP_EVERYONE` | Farbe wählen → alle anderen aktiven Spieler werden übersprungen → derselbe Spieler ist sofort erneut am Zug unter der gewählten Farbe |
+| REVERSE +4, WILD DRAW 6, WILD DRAW 10, COLOR ROULETTE, WILD, WILD DRAW 4 | `WILD_REVERSE_DRAW_4`/`WILD_DRAW_6`/`WILD_DRAW_10`/`WILD_COLOR_ROULETTE`/`WILD`/`WILD_DRAW_4` | wie gehabt: Farbe wählen, dann Effekt |
+
+`SWAP_HAND` und `ROTATE_HANDS` waren zuvor reguläre Farbkarten und sind jetzt
+Teil der Chaos-Familie (farblos, mit Farbwahl vor der Auflösung) — die
+Gesamtstückzahl blieb dabei erhalten (5× ROTATE, 10× SWAP), nur nicht mehr
+pro Farbe vervielfacht.
+
+Aktionskarten und Chaos-Karten erhalten ihren dezenten holografischen Rand
+direkt aus dem verbindlichen SVG-/PNG-Asset-System. Jede Karte trägt außerdem
+einen `aria-label`/`title` mit Klartext-Bedeutung. Vollständiges Inventar,
+Ordner und Kompatibilitätsregeln stehen in `CARD_ASSET_REPORT.md`.
 
 Zusätzlich umgesetzt: Bots vor Spielstart aus der Lobby entfernbar, Gewinner-
 Screen mit `Spiel verlassen` / `Nächste Runde` / `Neues Spiel erstellen`
@@ -87,13 +125,10 @@ Screen mit `Spiel verlassen` / `Nächste Runde` / `Neues Spiel erstellen`
 neues Spiel startet stattdessen einen neuen Raum), Spieler-Bildschirm zeigt
 jetzt Hand + kompletten Tisch kombiniert.
 
-**Bewusst nicht umgesetzt** (großer separater Architektur-Aufwand, hier aus
-Zeitgründen ausgeklammert): das im Brief beschriebene vollständige
-Event-/Animations-System (`CARD_PLAYED`, `CARDS_DRAWN`, … als eigene
-Realtime-Events mit clientseitiger Animations-Choreografie einschließlich
-Karten, die sichtbar vom Spieler zum Ablagestapel fliegen). Der Games-State
-selbst folgt aber bereits strikt dem geforderten Prinzip "State zuerst, dann
-Darstellung" — es gibt schlicht noch keine eigene Animationsschicht obendrauf.
+Das Ereignis-/Animations-System läuft als getrennte clientseitige
+Präsentationsschicht über dem autoritativen Spielzustand. Karten in Hand,
+Ablagestapel und Zugwiedergabe werden dabei über dieselbe `Card`-Komponente
+und damit aus denselben finalen Assets gerendert.
 
 ### Setup von Grund auf (z. B. für ein eigenes/neues Supabase-Projekt)
 
@@ -124,10 +159,12 @@ npm install
 npm test
 ```
 
-Die Rule-Engine-Tests (`tests/rulesEngine.test.ts`) laufen komplett ohne
-Supabase — Zugreihenfolge, Reverse/Skip, Draw-Stacking, 7er-Handtausch,
-0er-Rotation (inkl. Bots, im und gegen den Uhrzeigersinn), Mercy Rule und
-Sieg sind abgedeckt.
+Die Rule-Engine-Tests (`tests/rulesEngine.test.ts`, `tests/cardFamilies.test.ts`)
+laufen komplett ohne Supabase — Zugreihenfolge, Reverse/Skip, Draw-Stacking,
+SWAP/ROTATE/SKIP ALL inklusive der verpflichtenden Farbwahl (auch mit
+Violett), 0er-Rotation (inkl. Bots, im und gegen den Uhrzeigersinn),
+Deckzusammensetzung (80 Basic / 40 Core Action, je Typ exakt gezählt), Mercy
+Rule und Sieg sind abgedeckt.
 
 ## Spielablauf
 
@@ -147,7 +184,12 @@ zweifelsfrei belegt und wurden konfigurierbar statt hart codiert umgesetzt
 diese gegen die offizielle Anleitung geprüft werden:
 
 - genaue Stückzahlen für Draw 6 / Draw 10 / Skip Everyone / Wild Reverse
-  Draw 4 / Wild Color Roulette / Discard All
+  Draw 4 / Wild Color Roulette / Discard All / den neuen farbigen Draw 4
+  (`TODO_DEFINE_COLORED_ACTION_COPY_COUNT`)
+- `TODO_DEFINE_SHOVE_EFFECT`: SHOVE (`DIAMOND`) hat noch keinen definierten
+  Effekt und verhält sich aktuell wie eine reine Matching-Karte
+- `TODO_DEFINE_LOWEST_HAND_TIE_RULE`: Gleichstand bei LOWEST ist nicht
+  definiert, aktuell Sitzreihenfolge als Platzhalter
 - ob Draw-Stacking über verschiedene Kartentypen hinweg erlaubt ist
 - exakter Schwellenwert und Wirkung der Mercy Rule
 

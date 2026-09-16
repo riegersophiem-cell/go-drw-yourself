@@ -4,6 +4,7 @@ import { joinRoom } from "../multiplayer/api";
 import { saveSession } from "../multiplayer/session";
 import { AvatarPicker } from "../components/AvatarPicker/AvatarPicker";
 import { DEFAULT_HUMAN_AVATAR } from "../game/avatars";
+import { ThemeSwitch } from "../theme/ThemeSwitch";
 import type { DeviceRole } from "../game/types";
 import type { RoomNavState } from "./RoomPage";
 
@@ -56,6 +57,7 @@ export function Join() {
 
   return (
     <div className="page page--centered">
+      <div className="page__theme-switch"><ThemeSwitch /></div>
       <h1 className="brand-title">Spiel beitreten</h1>
       <div className="panel">
         <label className="field-label" htmlFor="code">

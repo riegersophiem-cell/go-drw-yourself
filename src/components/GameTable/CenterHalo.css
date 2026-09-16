@@ -1,0 +1,32 @@
+.center-halo {
+  position: absolute;
+  z-index: 0;
+  left: 50%;
+  top: 50%;
+  width: 190%;
+  height: 190%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(120, 170, 255, .22) 0%, rgba(220, 236, 255, .1) 45%, transparent 72%);
+  filter: blur(2px);
+  transition: background 420ms ease;
+  pointer-events: none;
+}
+
+.center-halo--colored {
+  background: radial-gradient(circle, color-mix(in srgb, var(--halo-color) 38%, transparent) 0%, color-mix(in srgb, var(--halo-color) 14%, transparent) 46%, transparent 74%);
+}
+
+.center-halo--chaos {
+  background: radial-gradient(circle, rgba(70, 70, 90, .3) 0%, rgba(140, 120, 200, .12) 40%, transparent 72%);
+  animation: center-halo-holo 3.4s ease-in-out infinite;
+}
+
+@keyframes center-halo-holo {
+  0%, 100% { filter: blur(2px) hue-rotate(0deg); }
+  50% { filter: blur(2px) hue-rotate(35deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .center-halo--chaos { animation: none; }
+}

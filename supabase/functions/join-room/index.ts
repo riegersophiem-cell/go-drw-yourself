@@ -2,6 +2,9 @@ import { generateSessionToken, sha256Hex } from "../_shared/persist.ts";
 import { corsHeaders, errorResponse, jsonResponse, supabaseAdmin } from "../_shared/supabaseAdmin.ts";
 import { DEFAULT_HUMAN_AVATAR, isHumanAvatarId } from "../../../src/game/avatars.ts";
 
+/** Matches the seat-ellipse/dev-harness assumption elsewhere (computeFullRingSeatPoints callers cap at 8) — not previously enforced server-side. */
+const MAX_PLAYERS = 8;
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders() });
 
@@ -30,6 +33,20 @@ Deno.serve(async (req) => {
     let playerId: string | null = null;
 
     if (role === "PLAYER") {
+      // No cap existed anywhere before this — join-room and add-bot could
+      // seat an unbounded number of players (the client/dev-harness code
+      // elsewhere already assumes a max of 8, e.g. computeFullRingSeatPoints
+      // callers). MAX_PLAYERS below is that same limit made an actual server
+      // rule instead of an unenforced assumption (see
+      // LOBBY_SESSION_FLOW_REPORT.md — NOT yet deployed).
+      const { count: seatedCount } = await admin
+        .from("players")
+        .select("player_id", { count: "exact", head: true })
+        .eq("room_id", room.room_id);
+      if ((seatedCount ?? 0) >= MAX_PLAYERS) {
+        return errorResponse("ROOM_FULL", "Dieser Raum ist voll.", 409);
+      }
+
       const { data: seatData } = await admin
         .from("players")
         .select("seat_index")

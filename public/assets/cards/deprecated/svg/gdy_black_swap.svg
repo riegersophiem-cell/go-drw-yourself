@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="750" height="1050" viewBox="0 0 750 1050" role="img" aria-labelledby="t d">
+<title id="t">SWAP</title><desc id="d">TRADE COMPLETE HANDS</desc><defs>
+<linearGradient id="body" x2="0" y2="1"><stop stop-color="#151923"/><stop offset="1" stop-color="#080B12"/></linearGradient>
+<linearGradient id="holo"><stop stop-color="#51D7FF"/><stop offset=".25" stop-color="#7047EB"/><stop offset=".5" stop-color="#FF477E"/><stop offset=".75" stop-color="#FFD75A"/><stop offset="1" stop-color="#61F2A9"/></linearGradient>
+<radialGradient id="glow"><stop stop-color="#7047EB" stop-opacity=".42"/><stop offset="1" stop-color="#7047EB" stop-opacity="0"/></radialGradient>
+<filter id="shadow"><feDropShadow dx="0" dy="14" stdDeviation="15" flood-opacity=".35"/></filter>
+<style>.brand,.family,.name,.sub,.icon,.number,.mini{font-family:Arial,sans-serif;fill:#F8FBFF}.brand{font-size:23px;font-weight:800;letter-spacing:2px}.family{font-size:16px;font-weight:700;letter-spacing:4px}.name{font-size:58px;font-weight:900;letter-spacing:1px}.sub{font-size:22px;font-weight:600;letter-spacing:1.5px}.icon{font-size:180px;font-weight:900}.number{font-size:76px;font-weight:900}.mini{font-size:38px;font-weight:800}</style></defs>
+<rect x="18" y="18" width="714" height="1014" rx="72" fill="url(#body)" filter="url(#shadow)"/>
+<rect x="31" y="31" width="688" height="988" rx="61" fill="none" stroke="url(#holo)" stroke-width="8"/>
+<circle cx="375" cy="475" r="285" fill="url(#glow)"/>
+<text x="78" y="100" class="brand">GO DR*W YOURSELF</text><text x="672" y="100" text-anchor="end" class="family">CHAOS</text>
+<g fill="#F8FBFF" stroke="#F8FBFF" stroke-width="22" stroke-linejoin="round"><rect x="205" y="390" width="105" height="155" rx="15"/><rect x="440" y="390" width="105" height="155" rx="15"/><path d="M330 365h95l-35-32m35 32-35 32M420 570h-95l35-32m-35 32 35 32" fill="none"/></g>
+<text x="375" y="810" text-anchor="middle" class="name">SWAP</text><text x="375" y="858" text-anchor="middle" class="sub">TRADE COMPLETE HANDS</text>
+<rect x="92" y="910" width="566" height="2" fill="#fff" opacity=".28"/><text x="375" y="960" text-anchor="middle" class="family">SWAP IT · STACK IT · PASS IT ON</text></svg>

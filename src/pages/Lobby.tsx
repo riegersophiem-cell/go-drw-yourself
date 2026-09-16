@@ -6,7 +6,12 @@ import { clearSession, type DeviceSession } from "../multiplayer/session";
 import { useRoomRealtime } from "../hooks/useRoomRealtime";
 import { AVATAR_IMAGE } from "../game/avatarImages";
 import { useIsRoomHost } from "../hooks/useIsRoomHost";
+import { useHasTableDevice } from "../hooks/useHasTableDevice";
 import { buildInviteShareData, buildInviteText } from "../multiplayer/invite";
+import { ThemeSwitch } from "../theme/ThemeSwitch";
+
+/** Client-side mirror of the (prepared but not yet deployed) server-side cap in join-room/add-bot — see LOBBY_SESSION_FLOW_REPORT.md. */
+const MAX_PLAYERS = 8;
 
 export interface LobbyProps {
   session: DeviceSession;
@@ -24,8 +29,14 @@ export interface LobbyProps {
 export function Lobby({ session, initialIsHost }: LobbyProps) {
   const navigate = useNavigate();
   const { players } = useRoomRealtime(session.roomId);
-  const liveIsHost = useIsRoomHost(session);
+  const { isHost: liveIsHost, hostDeviceId } = useIsRoomHost(session);
   const isHost = initialIsHost === true || liveIsHost;
+  // Host visibility before Start (brief section 15/18/38): the host needs to
+  // know a physical table screen is actually connected before pressing
+  // "Spiel starten" — previously this hook was wired only into the in-game
+  // PlayerGame view, so a host could start a presence game with zero table
+  // devices connected and nobody in the lobby was ever told.
+  const hasTableDevice = useHasTableDevice(session.roomId);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [inviteStatus, setInviteStatus] = useState<string | null>(null);
@@ -129,6 +140,7 @@ export function Lobby({ session, initialIsHost }: LobbyProps) {
 
   return (
     <div className="page page--centered">
+      <div className="page__theme-switch"><ThemeSwitch /></div>
       <h1 className="brand-title">Raum {session.roomCode}</h1>
       <div className="panel panel--wide">
         <div className="lobby-invite">
@@ -145,6 +157,7 @@ export function Lobby({ session, initialIsHost }: LobbyProps) {
               <span className="lobby-player-list__identity">
                 {AVATAR_IMAGE[p.avatar] ? <img className="lobby-player-list__avatar" src={AVATAR_IMAGE[p.avatar]} alt="" /> : "👤"}
                 {p.display_name}
+                {p.device_id && p.device_id === hostDeviceId && <span className="lobby-player-list__badge lobby-player-list__badge--host">HOST</span>}
               </span>
               <span className="lobby-player-list__status">
                 {p.player_type === "HUMAN" ? (
@@ -162,8 +175,23 @@ export function Lobby({ session, initialIsHost }: LobbyProps) {
               </span>
             </li>
           ))}
-          {session.role !== "PLAYER" && <li>{session.role === "TABLE" ? "🃏 Dieses Gerät: Spieltisch" : "👁 Dieses Gerät: Zuschauer"}</li>}
         </ul>
+
+        {/* Table device gets its own compact block, never mixed into the
+            player list as a regular row (brief section 14/38: "Table Device
+            nicht wie normaler Spieler darstellen"). Shown to everyone, not
+            just the host, so any device in the room can see whether a
+            presence table is available. */}
+        <div className={`lobby-table-device ${hasTableDevice ? "lobby-table-device--connected" : ""}`}>
+          <span className="lobby-table-device__icon" aria-hidden="true">🃏</span>
+          <span className="lobby-table-device__copy">
+            <strong>Tischgerät</strong>
+            <span>{hasTableDevice ? "Verbunden — Präsenzmodus möglich" : "Kein Tischgerät — alle spielen remote"}</span>
+          </span>
+          {session.role !== "PLAYER" && (
+            <span className="lobby-table-device__self">{session.role === "TABLE" ? "Dieses Gerät" : "👁 Zuschauer"}</span>
+          )}
+        </div>
 
         {error && (
           <div>
@@ -179,13 +207,19 @@ export function Lobby({ session, initialIsHost }: LobbyProps) {
 
         {isHost && (
           <>
-            <button className="btn btn--secondary" onClick={handleAddBot} disabled={busy}>
+            {/* MAX_PLAYERS mirrors the (currently client-only — see
+                LOBBY_SESSION_FLOW_REPORT.md, server-side enforcement is
+                prepared but not deployed) room-size assumption used
+                elsewhere. Disabling here at least gives immediate feedback
+                instead of a failed request once the cap is hit. */}
+            <button className="btn btn--secondary" onClick={handleAddBot} disabled={busy || players.length >= MAX_PLAYERS}>
               Bot hinzufügen
             </button>
             <button className="btn btn--primary" onClick={() => void handleStart()} disabled={busy || players.length < 2}>
               Spiel starten
             </button>
             {players.length < 2 && <p className="field-label">Mindestens 2 Spieler nötig.</p>}
+            {players.length >= MAX_PLAYERS && <p className="field-label">Raum ist voll ({MAX_PLAYERS} Spieler).</p>}
           </>
         )}
         {!isHost && <p className="field-label">Warte, bis der Host das Spiel startet…</p>}

@@ -1,0 +1,186 @@
+.action-focus { position: absolute; z-index: 18; inset: 0; pointer-events: none; }
+
+/* Deliberately no blur and much lighter than before — the table itself
+   stays the stage, this only nudges focus toward the center (brief section
+   2: "Tisch bleibt erkennbar, kein Zustand in dem die Spieler praktisch
+   verschwinden"). */
+.action-focus__scrim {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, rgba(6, 12, 22, .16) 0%, rgba(6, 12, 22, .3) 100%);
+  animation: action-focus-scrim-in .3s ease both;
+}
+
+/* Compact — title + at most one short line, never the two-line block the
+   old design used (brief section 9: "Text soll unterstützen, nicht die
+   Bühne dominieren"). Default (mobile/REMOTE_MOBILE_FULL) position:
+   unchanged from before. TABLE_DEVICE gets its own CENTER ACTION TITLE ZONE
+   below, anchored to the actual Hero Center geometry instead of a screen
+   percentage that could land on top of the top Player Unit. */
+.action-focus__headline {
+  position: absolute;
+  left: 50%;
+  top: 14%;
+  transform: translate(-50%, 0);
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  text-align: center;
+  animation: action-focus-headline-in .32s cubic-bezier(.2,.8,.2,1) both;
+}
+.action-focus--major .action-focus__headline { top: 10%; }
+
+/* REMOTE_MOBILE_FULL safe zone: the default top:10-14% collided with the
+   compact ring's player chips (found live: "ROTATE"/"Hands move" overlapping
+   "Bot 2"'s name). The compact ring now sits on a real ellipse
+   (computeCompactRingSeatPoints, radiusYPct 32) absolutely positioned over
+   `.game-table__surface`, whose own max-height (44vh, see GameTable.css) is
+   a reliable ceiling regardless of actual player count/available height
+   (surface height can only be <= that cap, never more). Seat 0 (the
+   topmost point of the ellipse) therefore never sits higher than
+   `paddingTop + (50-32)% * 44vh` from the viewport top — anchoring just
+   below that instead of a generic screen percentage is what actually clears
+   every player count (MOBILE_HAND_UI_FIX_REPORT.md). */
+.game-table--remote_mobile_full .action-focus__headline {
+  top: calc(116px + (44vh * 0.13) + 50px);
+  gap: 0;
+  /* A small glass plate instead of bare text floating directly on the table
+     gradient (brief follow-up: "Titel sitzt okay, aber noch etwas
+     schwebend") — same translucent-chip language as the hand dock/room chip,
+     so it reads as anchored UI, not a debug label. */
+  padding: 3px 16px 4px;
+  border-radius: 14px;
+  background: rgba(10, 16, 28, .4);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, .22), 0 0 20px -4px var(--action-accent, transparent);
+}
+@media (max-width: 760px) {
+  /* The +50px buffer (not just a small nudge) accounts for the seat TOKEN's
+     own footprint extending well below its ellipse center point (avatar +
+     gap + name pill, measured live at ~68px) — the ellipse math above only
+     gives the center point, not the token's rendered bottom edge. (0.13 =
+     50% - COMPACT_RING_RADII.radiusYPct's 37, see seatGeometry.ts — bumped
+     from 32 specifically to buy more clearance here, not just decoration.)
+     Found via exact getBoundingClientRect() measurement: an earlier,
+     smaller buffer left an 8-9px real overlap between the headline and
+     Sophie's name pill that wasn't obvious from a screenshot alone but was
+     confirmed by measuring both rects. */
+  .game-table--remote_mobile_full .action-focus__headline { top: calc(88px + (44vh * 0.13) + 50px); }
+}
+/* The gap between the seat ring and the hero/discard card is narrow on a
+   phone (measured live: ~30px) — too little for the default headline's
+   font sizes, which is what made the buffer above have to fight both a
+   too-high AND too-low collision at once. Shrinking the text (same idea as
+   TABLE_DEVICE's own `.action-focus--table` compact variant) is what
+   actually makes both constraints satisfiable simultaneously. */
+.game-table--remote_mobile_full .action-focus__title { font-size: clamp(.78rem, 3.4vw, .95rem); line-height: 1.05; }
+.game-table--remote_mobile_full .action-focus--major .action-focus__title { font-size: clamp(.85rem, 3.8vw, 1.05rem); }
+.game-table--remote_mobile_full .action-focus__subtitle { font-size: clamp(.48rem, 2vw, .58rem); line-height: 1.05; margin-top: 1px; }
+
+/* CENTER ACTION TITLE ZONE (TABLE_DEVICE only): the top seat is always at
+   the ellipse's exact -90° point regardless of player count (seat 0 in
+   computeFullRingSeatPoints), so this gap between the top Player Unit's
+   lower edge and the Hero Card's upper edge is constant — measured live at
+   1280x800: Player Unit bottom ~194px, Hero Card top ~245px of a 760px-tall
+   surface, i.e. a fixed band around 29% of the surface height. Anchoring
+   here instead of an arbitrary screen top:% is what actually fixes the
+   ROTATE/TARGET-vs-Sophie collision (ACTION_FOCUS_POLISH_REPORT.md). */
+.action-focus--table .action-focus__headline {
+  /* Anchored from its OWN top edge (not centered) starting just below the
+     top Player Unit's lower edge (~25.5% of surface height, see comment
+     above) — the whole ~6.7%-tall gap is barely one compact 2-line block
+     tall, so every extra px of line-height/margin here was what caused the
+     collision live (measured: a centered, slightly-too-tall block overlapped
+     both neighbours by a few px). Top-anchoring plus the tighter
+     line-heights below keeps it clear of both sides by construction. */
+  top: 26.3%;
+  transform: translate(-50%, 0);
+  gap: 0;
+  animation-name: action-focus-headline-in-table;
+}
+.action-focus__title {
+  font-size: clamp(1.1rem, 2.6vw, 1.6rem);
+  font-weight: 950;
+  letter-spacing: .04em;
+  color: #fff;
+  text-shadow: 0 4px 16px rgba(0,0,0,.45);
+}
+.action-focus--major .action-focus__title { font-size: clamp(1.5rem, 3.4vw, 2.1rem); }
+/* Kartenfarbe als ruhiger Akzent (weicher Glow hinter dem Text), nicht als
+   grelle Neon-Textfarbe (brief: "premium, klar, integriert" statt "arcade
+   neon headline") — the title itself stays a calm off-white. */
+.action-focus--table .action-focus__title {
+  color: #eef3fb;
+  text-shadow: 0 3px 10px rgba(0,0,0,.5), 0 0 20px var(--action-accent, transparent);
+  font-size: clamp(.8rem, 1.4vw, 1rem);
+  line-height: 1.1;
+}
+.action-focus--table.action-focus--major .action-focus__title { font-size: clamp(.9rem, 1.6vw, 1.1rem); }
+.action-focus__subtitle {
+  font-size: clamp(.68rem, 1.3vw, .82rem);
+  font-weight: 800;
+  letter-spacing: .05em;
+  color: #dbeafe;
+  text-shadow: 0 2px 10px rgba(0,0,0,.4);
+}
+.action-focus--table .action-focus__subtitle { font-size: clamp(.48rem, .85vw, .58rem); line-height: 1.1; margin-top: 1px; }
+
+.action-focus__skip {
+  position: absolute;
+  z-index: 3;
+  right: 14px;
+  bottom: 14px;
+  width: 30px;
+  height: 30px;
+  border: 1px solid rgba(255, 255, 255, .3);
+  border-radius: 50%;
+  color: #eef6ff;
+  font: inherit;
+  font-weight: 800;
+  background: rgba(20, 32, 50, .55);
+  backdrop-filter: blur(6px);
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.action-focus__narrator{position:absolute;left:50%;top:30%;transform:translateX(-50%);display:grid;grid-template-columns:42px minmax(0,1fr) auto;align-items:center;gap:10px;width:min(420px,calc(100% - 32px));min-height:58px;padding:8px 10px;border:1px solid rgba(255,255,255,.72);border-radius:22px;color:#eef6ff;text-align:left;background:linear-gradient(145deg,rgba(19,38,62,.96),rgba(8,21,38,.94));box-shadow:0 14px 34px rgba(31,57,90,.3),0 0 24px rgba(70,139,255,.16);backdrop-filter:blur(14px);animation:action-focus-narrator-in .28s cubic-bezier(.2,.8,.2,1) both}
+.action-focus__avatar{width:40px;height:40px;border:2px solid rgba(255,211,74,.72);border-radius:10px;overflow:hidden;background:#243852}
+.action-focus__avatar img{width:100%;height:100%;object-fit:contain;object-position:bottom center}
+.action-focus__avatar span{display:grid;height:100%;place-items:center}
+.action-focus__copy{min-width:0;display:flex;flex-direction:column}
+.action-focus__copy small{color:#8eadd2;font-size:.55rem;font-weight:800;letter-spacing:.08em}
+.action-focus__copy strong{font-size:.78rem;line-height:1.2}
+.action-focus__narrator button{pointer-events:auto;padding:7px 10px;border:1px solid rgba(255,255,255,.25);border-radius:999px;color:#dcecff;font:inherit;font-size:.58rem;font-weight:800;background:rgba(255,255,255,.08);cursor:pointer}
+
+.action-focus__motion{position:absolute;left:50%;top:45%;transform:translate(-50%,-50%);filter:drop-shadow(0 12px 16px rgba(16,38,68,.38))}
+.action-focus--play .action-focus__motion,.action-focus--extra .action-focus__motion{animation:action-focus-card-flight .72s cubic-bezier(.2,.72,.25,1) both}
+.action-focus--major .action-focus__motion{top:38%}
+
+/* The old "AUSGESETZT"/"STACK" full-screen text stamps were dropped —
+   ActionChoreography's target marker + card-back travel plus the compact
+   headline title above already explain SKIP/STACK without a second,
+   competing overlay (brief section 11/12: no extra event banners). */
+
+@keyframes action-focus-scrim-in{from{opacity:0}to{opacity:1}}
+@keyframes action-focus-headline-in{from{opacity:0;transform:translate(-50%,0) scale(.88)}to{opacity:1;transform:translate(-50%,0) scale(1)}}
+@keyframes action-focus-headline-in-table{from{opacity:0;transform:translate(-50%,0) scale(.88)}to{opacity:1;transform:translate(-50%,0) scale(1)}}
+@keyframes action-focus-narrator-in{from{opacity:0;translate:0 -12px;scale:.96}to{opacity:1;translate:0 0;scale:1}}
+@keyframes action-focus-card-flight{0%{opacity:0;translate:-190px -60px;rotate:-16deg;scale:.7}70%{opacity:1;translate:0 0;rotate:3deg;scale:1.15}100%{opacity:0;translate:0 18px;rotate:0;scale:.9}}
+
+@media(max-width:760px){
+  .action-focus__narrator{top:29%;grid-template-columns:34px minmax(0,1fr) auto;min-height:48px;border-radius:18px}
+  .action-focus__avatar{width:32px;height:32px}
+  .action-focus__copy strong{font-size:.68rem}
+  .action-focus__narrator button{padding:6px 8px;font-size:.5rem}
+  .action-focus__motion{top:48%}
+}
+
+@media(prefers-reduced-motion:reduce){
+  .action-focus__narrator{animation:action-focus-fade .18s ease both}
+  .action-focus__motion,.action-focus:after,.action-focus__headline,.action-focus__scrim{animation:action-focus-fade .18s ease both!important}
+  @keyframes action-focus-fade{from{opacity:0}to{opacity:1}}
+}
+
+.action-focus--persistent .action-focus__narrator{animation:none;opacity:.92;box-shadow:0 8px 20px rgba(31,57,90,.22)}
