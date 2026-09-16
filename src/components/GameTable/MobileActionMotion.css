@@ -1,0 +1,82 @@
+.mobile-action-motion {
+  position: absolute;
+  inset: 0;
+  z-index: 9;
+  pointer-events: none;
+}
+
+/* A small hand-of-cards silhouette — two layered leaves via nested spans
+   (mobile scale of ActionChoreography's handstack glyph) — not a flat debug
+   rectangle. The lone card-back variant (DRAW) skips the back leaf. */
+.mobile-action-motion__glyph {
+  position: absolute;
+  z-index: 2;
+  width: 16px;
+  height: 22px;
+  transform: translate(-50%, -50%);
+  transition: left .42s cubic-bezier(.4, .1, .3, 1), top .42s cubic-bezier(.4, .1, .3, 1);
+}
+.mobile-action-motion__glyph--cardback { width: 14px; height: 19px; }
+
+.mobile-action-motion__leaf {
+  position: absolute;
+  inset: 0;
+  border-radius: 3px;
+  background: linear-gradient(150deg, #2c3f5c 0%, #101f36 100%);
+  border: 1px solid rgba(255, 255, 255, .4);
+  box-shadow: 0 3px 7px rgba(0, 0, 0, .32);
+  transform: translate(-2px, 1px) rotate(-6deg);
+  opacity: .85;
+}
+.mobile-action-motion__leaf--front {
+  transform: none;
+  z-index: 1;
+  background: linear-gradient(150deg, #34496a 0%, #142438 100%);
+  border-color: rgba(255, 255, 255, .55);
+  opacity: 1;
+}
+.mobile-action-motion__leaf--front::after {
+  content: "";
+  position: absolute;
+  inset: 22% 28%;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, .22);
+}
+
+.mobile-action-motion__link {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+}
+.mobile-action-motion__target-line,
+.mobile-action-motion__swap-line {
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-dasharray: 5 6;
+  opacity: .85;
+  filter: drop-shadow(0 0 2px currentColor);
+  animation: mobile-action-motion-dash 1s linear infinite;
+}
+
+.mobile-action-motion__marker {
+  position: absolute;
+  z-index: 3;
+  width: 13px;
+  height: 13px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 2px solid #ef4444;
+  background: rgba(10, 16, 28, .5);
+  animation: mobile-action-motion-marker-in .25s ease both;
+}
+
+@keyframes mobile-action-motion-dash { to { stroke-dashoffset: -11; } }
+@keyframes mobile-action-motion-marker-in {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(.4); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mobile-action-motion__glyph { transition-duration: .16s; }
+  .mobile-action-motion__target-line, .mobile-action-motion__swap-line { animation: none; }
+}

@@ -31,6 +31,17 @@ Deno.serve(async (req) => {
       publicState: publicView?.view ?? null,
     });
   } catch (err) {
-    return errorResponse("SERVER_ERROR", String(err), 500);
+    // authenticateDevice throws plain Error("UNKNOWN_DEVICE" |
+    // "INVALID_SESSION") — previously every failure here (including these
+    // two, the common "reload after clearing storage / stale session on a
+    // deleted room" cases) was wrapped as a generic SERVER_ERROR with the
+    // raw error string as its message, which the client then displayed
+    // verbatim (e.g. "Error: UNKNOWN_DEVICE") instead of a real German
+    // message (see LOBBY_SESSION_FLOW_REPORT.md). Both codes now have a
+    // translation in src/game/errors.ts, so propagating the real code here
+    // is what actually lets the client show it.
+    const code = err instanceof Error && (err.message === "UNKNOWN_DEVICE" || err.message === "INVALID_SESSION") ? err.message : "SERVER_ERROR";
+    const status = code === "SERVER_ERROR" ? 500 : 401;
+    return errorResponse(code, String(err), status);
   }
 });

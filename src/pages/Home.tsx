@@ -4,6 +4,7 @@ import { createRoom } from "../multiplayer/api";
 import { saveSession } from "../multiplayer/session";
 import { AvatarPicker } from "../components/AvatarPicker/AvatarPicker";
 import { DEFAULT_HUMAN_AVATAR } from "../game/avatars";
+import { ThemeSwitch } from "../theme/ThemeSwitch";
 import type { RoomNavState } from "./RoomPage";
 
 export function Home() {
@@ -43,6 +44,7 @@ export function Home() {
 
   return (
     <div className="page page--centered">
+      <div className="page__theme-switch"><ThemeSwitch /></div>
       <h1 className="brand-title brand-title--hero">
         GO DR<span className="brand-title__censor">*</span>W
         <br />

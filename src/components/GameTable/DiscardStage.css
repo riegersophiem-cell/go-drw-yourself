@@ -1,0 +1,158 @@
+.discard-stage {
+  position: absolute;
+  z-index: 5;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.discard-stage__grid {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: clamp(18px, 4vw, 40px);
+}
+
+.discard-stage__pile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.discard-stage__pile--draw { transform: translateY(6%); opacity: .92; }
+
+.discard-stage__card-stack--draw {
+  position: relative;
+  filter: drop-shadow(0 8px 14px rgba(30, 50, 80, .16));
+}
+
+/* TABLE_DEVICE only: count docked to the pile itself as a small badge
+   instead of a loose line of text floating underneath — reads as one piece
+   with the pile it describes (brief: "Count-Badge soll nicht wie ein loser
+   Fremdkörper wirken"). Mobile (compact) keeps its original `.discard-stage__count`
+   layout completely untouched below. */
+.discard-stage__count--badge {
+  position: absolute;
+  z-index: 3;
+  right: -8px;
+  bottom: -6px;
+  padding: 1px 8px;
+  font-size: .58rem;
+}
+
+.discard-stage__card-stack--hero {
+  position: relative;
+  z-index: 2;
+  filter: drop-shadow(0 18px 30px rgba(20, 40, 70, .22));
+}
+
+.discard-stage__count {
+  padding: 2px 10px;
+  border-radius: 999px;
+  color: var(--text-primary);
+  font-size: .62rem;
+  font-weight: 800;
+  background: var(--bg-surface-elevated);
+  box-shadow: var(--shadow-soft);
+}
+
+.discard-stage__resolved-tint {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  border-radius: 16px;
+  mix-blend-mode: color;
+  opacity: .82;
+  pointer-events: none;
+  animation: discard-tint-in .3s ease both;
+}
+/* The 5 game colors - shared tokens (index.css), never affected by Light/Dark
+   (DARK_MODE_IMPLEMENTATION_REPORT.md section 16/27: these belong to the
+   game, not the UI theme). */
+.discard-stage__resolved-tint--RED { background: var(--game-red); }
+.discard-stage__resolved-tint--BLUE { background: var(--game-blue); }
+.discard-stage__resolved-tint--GREEN { background: var(--game-green); }
+.discard-stage__resolved-tint--YELLOW { background: var(--game-gold); }
+.discard-stage__resolved-tint--VIOLET { background: var(--game-violet); }
+
+@keyframes discard-tint-in { from { opacity: 0; } to { opacity: .82; } }
+
+.discard-stage__resolved-color {
+  position: absolute;
+  z-index: 3;
+  right: -6px;
+  bottom: -6px;
+  width: 22px;
+  height: 22px;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, .3);
+}
+.discard-stage__resolved-color--RED { background: var(--game-red); }
+.discard-stage__resolved-color--BLUE { background: var(--game-blue); }
+.discard-stage__resolved-color--GREEN { background: var(--game-green); }
+.discard-stage__resolved-color--YELLOW { background: var(--game-gold); }
+.discard-stage__resolved-color--VIOLET { background: var(--game-violet); }
+
+/* Hidden while any Action Focus overlay is actively playing — otherwise it
+   visually collides with ActionFocus's own centered headline (found live:
+   "SKIP ALL" overlapping the pending draw-stack badge). The narrator/headline
+   already carries the relevant info during that moment. */
+.game-table--focus .discard-stage__stack-chip { opacity: 0; }
+
+.discard-stage__stack-chip {
+  transition: opacity 160ms ease;
+  position: absolute;
+  z-index: 6;
+  top: -14%;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  color: #fff;
+  font-weight: 900;
+  background: linear-gradient(180deg, #2563eb, #1d4ed8);
+  box-shadow: 0 8px 20px rgba(37, 99, 235, .38);
+  white-space: nowrap;
+}
+
+.discard-stage--compact .discard-stage__grid { gap: clamp(8px, 2.4vw, 14px); }
+.discard-stage--compact .discard-stage__count { font-size: .56rem; padding: 1px 8px; }
+
+/* REMOTE_MOBILE_FULL only: now that players sit directly on the compact
+   ring's own ellipse (MOBILE_HAND_UI_FIX_REPORT.md follow-up), the hero/draw
+   pair needs to be noticeably smaller than the shared `.uno-card--hero`/
+   `.uno-card--table` mobile breakpoints (which were tuned for the old
+   flex-strip layout, where nothing needed to visually fit inside the seat
+   ellipse) — otherwise the center cards collide with the seat tokens above
+   and below them. Scoped to `--compact` only, `!important` to win over
+   Card.css's own width rules, exactly like TABLE_DEVICE's analogous
+   `:not(.discard-stage--compact)` override below. */
+.discard-stage--compact .discard-stage__card-stack--hero .uno-card { width: clamp(50px, 16vw, 80px) !important; }
+.discard-stage--compact .discard-stage__card-stack--draw .uno-card { width: clamp(28px, 9vw, 46px) !important; }
+
+/* TABLE_DEVICE only (non-compact): Discard is the Hero Center's dominant
+   permanent focus (HERO_CENTER_FIX_REPORT.md) — sized well above the shared
+   Card.css `.uno-card--hero` default (160px) so it reads as the strongest
+   element on screen, with Draw kept at ~55% of it, close alongside instead
+   of a wide, empty gap between the two piles. Scoped to this component only
+   — mobile (`--compact`) keeps the shared Card.css sizes untouched. */
+.discard-stage:not(.discard-stage--compact) .discard-stage__card-stack--hero .uno-card {
+  width: clamp(188px, 14vw, 222px) !important;
+}
+.discard-stage:not(.discard-stage--compact) .discard-stage__card-stack--draw .uno-card {
+  width: clamp(104px, 7.7vw, 122px) !important;
+}
+.discard-stage:not(.discard-stage--compact) .discard-stage__grid { gap: clamp(10px, 1.6vw, 18px); }
+
+@media (max-width: 760px) {
+  .discard-stage__grid { gap: clamp(10px, 3vw, 22px); }
+}

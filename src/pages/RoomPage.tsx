@@ -142,7 +142,19 @@ export function RoomPage() {
   }, [showReconnectMessage]);
 
   if (loading) return <div className="page page--centered">Verbinde…</div>;
-  if (error) return <div className="page page--centered error-text">{error}</div>;
+  if (error) {
+    // A failed reconnect (deleted room, expired/invalid session, etc.)
+    // previously left the user on a dead-end error page with no way
+    // forward — the session that got them here is already unusable, so
+    // there is nothing to retry; the only sane next step is a fresh
+    // join/create.
+    return (
+      <div className="page page--centered">
+        <p className="error-text">{error}</p>
+        <button className="btn btn--primary" onClick={() => navigate("/")}>Zur Startseite</button>
+      </div>
+    );
+  }
   if (!session || !roomId || !status) return null;
 
   const content = status === "LOBBY"
@@ -151,5 +163,6 @@ export function RoomPage() {
       ? <PlayerGame session={session} />
       : <TableGame session={session} />;
 
-  return <>{content}{showReconnectMessage && <div className="reconnect-toast" role="status">Du bist wieder im Spiel.</div>}</>;
+  const isTableDevice = session.role !== "PLAYER";
+  return <>{content}{showReconnectMessage && <div className={`reconnect-toast ${isTableDevice ? "reconnect-toast--table" : ""}`} role="status">Du bist wieder im Spiel.</div>}</>;
 }

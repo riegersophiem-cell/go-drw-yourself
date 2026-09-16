@@ -3,6 +3,7 @@ import { dispatchGameAction } from "../src/game/actions";
 import { rotateHandsAllPlayers, swapHands } from "../src/game/effects";
 import { createNewGame, definitionOfInstance, getHandOfPlayer, getPlayer } from "../src/game/gameState";
 import {
+  chooseColor,
   chooseSkipTarget,
   chooseSwapTarget,
   discardExtraCard,
@@ -125,24 +126,57 @@ describe("draw effects", () => {
   });
 });
 
-describe("SWAP_HAND (ex 7)", () => {
-  it("swaps hand ownership atomically between the two chosen players", () => {
+describe("SWAP_HAND (ex 7) — now a Chaos card", () => {
+  it("is colorless and always playable", () => {
+    const state = newGame(["A", "B", "C"]);
+    const swapDef = Object.values(state.cardDefinitions).find((d) => d.type === "SWAP_HAND")!;
+    expect(swapDef.color).toBe("WILD");
+    expect(isPlayable(swapDef, state)).toBe(true);
+  });
+
+  it("requires a color choice before the target choice, then swaps hands and keeps the chosen color active", () => {
     let state = newGame(["A", "B", "C"]);
     const [a, , c] = state.players;
     const aHandBefore = getPlayer(state, a.playerId).currentHandId;
     const cHandBefore = getPlayer(state, c.playerId).currentHandId;
+    const otherColor = (["RED", "BLUE", "GREEN", "YELLOW", "VIOLET"] as CardColor[]).find((color) => color !== state.activeColor)!;
 
-    const swapDefId = Object.values(state.cardDefinitions).find((d) => d.type === "SWAP_HAND" && d.color === state.activeColor)!.defId;
+    const swapDefId = Object.values(state.cardDefinitions).find((d) => d.type === "SWAP_HAND")!.defId;
     const [instanceId] = Object.entries(state.cardInstanceRegistry).find(([, defId]) => defId === swapDefId)!;
     state = giveCardToPlayer(state, a.playerId, instanceId);
 
+    // Played without a color: must defer to color choice first, not the swap target.
     const played = playCard(state, a.playerId, instanceId);
-    expect(played.requiresSwapTarget).toBe(true);
-    expect(played.state.phase).toBe("WAITING_FOR_SWAP_TARGET");
+    expect(played.requiresColorChoice).toBe(true);
+    expect(played.requiresSwapTarget).toBe(false);
+    expect(played.state.phase).toBe("WAITING_FOR_COLOR");
 
-    const finalState = chooseSwapTarget(played.state, a.playerId, c.playerId);
+    // Choosing the color is what then opens the target-selection phase.
+    const afterColor = chooseColor(played.state, a.playerId, otherColor);
+    expect(afterColor.phase).toBe("WAITING_FOR_SWAP_TARGET");
+    expect(afterColor.activeColor).toBe(otherColor);
+
+    const finalState = chooseSwapTarget(afterColor, a.playerId, c.playerId);
     expect(getPlayer(finalState, a.playerId).currentHandId).toBe(cHandBefore);
     expect(getPlayer(finalState, c.playerId).currentHandId).toBe(aHandBefore);
+    // The color chosen before the swap remains active afterwards.
+    expect(finalState.activeColor).toBe(otherColor);
+  });
+
+  it("also resolves in a single call when a color is supplied upfront (the path bots use)", () => {
+    let state = newGame(["A", "B", "C"]);
+    const [a, , c] = state.players;
+    const swapDefId = Object.values(state.cardDefinitions).find((d) => d.type === "SWAP_HAND")!.defId;
+    const [instanceId] = Object.entries(state.cardInstanceRegistry).find(([, defId]) => defId === swapDefId)!;
+    state = giveCardToPlayer(state, a.playerId, instanceId);
+
+    const played = playCard(state, a.playerId, instanceId, { chosenColor: "VIOLET" });
+    expect(played.requiresSwapTarget).toBe(true);
+    expect(played.state.phase).toBe("WAITING_FOR_SWAP_TARGET");
+    expect(played.state.activeColor).toBe("VIOLET");
+
+    const finalState = chooseSwapTarget(played.state, a.playerId, c.playerId);
+    expect(finalState.activeColor).toBe("VIOLET");
   });
 });
 
@@ -179,6 +213,32 @@ describe("ROTATE_HANDS (ex 0)", () => {
     expect(getPlayer(rotated, max.playerId).currentHandId).toBe(handC);
     expect(getPlayer(rotated, annaP.playerId).currentHandId).toBe(handD);
     expect(getPlayer(rotated, klaus.playerId).currentHandId).toBe(handA);
+  });
+
+  it("is colorless and requires a color choice before rotating (playCard flow)", () => {
+    let state = newGame(["A", "B", "C"]);
+    const [a, b, c] = state.players;
+    const handA = a.currentHandId;
+    const handB = b.currentHandId;
+    const handC = c.currentHandId;
+    const rotateDef = Object.values(state.cardDefinitions).find((d) => d.type === "ROTATE_HANDS")!;
+    expect(rotateDef.color).toBe("WILD");
+    const [instanceId] = Object.entries(state.cardInstanceRegistry).find(([, defId]) => defId === rotateDef.defId)!;
+    state = giveCardToPlayer(state, a.playerId, instanceId);
+
+    const played = playCard(state, a.playerId, instanceId);
+    expect(played.requiresColorChoice).toBe(true);
+    expect(played.state.phase).toBe("WAITING_FOR_COLOR");
+    // Hands must NOT have rotated yet — the color choice comes first.
+    expect(getPlayer(played.state, a.playerId).currentHandId).toBe(handA);
+
+    const afterColor = chooseColor(played.state, a.playerId, "VIOLET");
+    expect(afterColor.activeColor).toBe("VIOLET");
+    // Now the rotation has happened (clockwise: everyone gets the hand of
+    // whoever sits behind them, see rotateHandsAllPlayers).
+    expect(getPlayer(afterColor, a.playerId).currentHandId).toBe(handC);
+    expect(getPlayer(afterColor, b.playerId).currentHandId).toBe(handA);
+    expect(getPlayer(afterColor, c.playerId).currentHandId).toBe(handB);
   });
 });
 
@@ -288,6 +348,29 @@ describe("DISCARD_ALL", () => {
   });
 });
 
+describe("SKIP_EVERYONE (Chaos/SKIP ALL)", () => {
+  it("requires a color choice, then skips every other active player and gives the same player an immediate extra turn under the chosen color", () => {
+    let state = newGame(["A", "B", "C"]);
+    const [a] = state.players;
+    const skipAllDef = Object.values(state.cardDefinitions).find((d) => d.type === "SKIP_EVERYONE")!;
+    expect(skipAllDef.color).toBe("WILD");
+    const [instanceId] = Object.entries(state.cardInstanceRegistry).find(([, defId]) => defId === skipAllDef.defId)!;
+    state = giveCardToPlayer(state, a.playerId, instanceId);
+
+    const played = playCard(state, a.playerId, instanceId);
+    expect(played.requiresColorChoice).toBe(true);
+    expect(played.state.phase).toBe("WAITING_FOR_COLOR");
+    // Still A's turn — the effect has not resolved yet, color comes first.
+    expect(played.state.currentPlayerId).toBe(a.playerId);
+
+    const afterColor = chooseColor(played.state, a.playerId, "VIOLET");
+    expect(afterColor.activeColor).toBe("VIOLET");
+    expect(afterColor.phase).toBe("WAITING_FOR_PLAY");
+    // Everyone else was skipped once; it wraps straight back to A.
+    expect(afterColor.currentPlayerId).toBe(a.playerId);
+  });
+});
+
 describe("bots participate in hand mechanics", () => {
   it("a swap between a human and a bot moves the bot's real hand", () => {
     const state = newGame(["Sophie", "Bot Anna"]);
@@ -352,6 +435,186 @@ describe("mercy rule", () => {
     const played = playCard(state, a.playerId, instanceId, { chosenColor: "RED" });
     const final = drawFromStackOrDeck(played.state, b.playerId);
     expect(getPlayer(final, b.playerId).eliminated).toBe(true);
+  });
+});
+
+describe("GIVE_TWO_TO_LOWEST ties (ACTION_CHAOS_LIFECYCLE spec section 6)", () => {
+  it("gives +1 each to every player tied for the lowest hand, not +2 to an arbitrary one", () => {
+    let state = newGame(["A", "B", "C", "D"]);
+    const [a, b, c, d] = state.players;
+
+    // B and C tied at 1 card each; D has more; A plays the card.
+    const shrink = (s: GameState, playerId: string, count: number) => {
+      const handId = getPlayer(s, playerId).currentHandId;
+      return { ...s, hands: { ...s.hands, [handId]: { handId, cardInstanceIds: s.hands[handId].cardInstanceIds.slice(0, count) } } };
+    };
+    state = shrink(state, b.playerId, 1);
+    state = shrink(state, c.playerId, 1);
+    state = shrink(state, d.playerId, 3);
+
+    const defId = Object.values(state.cardDefinitions).find((def) => def.type === "GIVE_TWO_TO_LOWEST" && def.color === state.activeColor)!.defId;
+    const [instanceId] = Object.entries(state.cardInstanceRegistry).find(([, id]) => id === defId)!;
+    state = giveCardToPlayer(state, a.playerId, instanceId);
+
+    const bBefore = getHandOfPlayer(state, b.playerId).cardInstanceIds.length;
+    const cBefore = getHandOfPlayer(state, c.playerId).cardInstanceIds.length;
+    const dBefore = getHandOfPlayer(state, d.playerId).cardInstanceIds.length;
+
+    const result = playCard(state, a.playerId, instanceId);
+
+    expect(getHandOfPlayer(result.state, b.playerId).cardInstanceIds.length).toBe(bBefore + 1);
+    expect(getHandOfPlayer(result.state, c.playerId).cardInstanceIds.length).toBe(cBefore + 1);
+    expect(getHandOfPlayer(result.state, d.playerId).cardInstanceIds.length).toBe(dBefore); // untouched, not tied for lowest
+  });
+
+  it("a three-way tie gives +1 to all three, not just two", () => {
+    let state = newGame(["A", "B", "C", "D"]);
+    const [a, b, c, d] = state.players;
+    const shrink = (s: GameState, playerId: string, count: number) => {
+      const handId = getPlayer(s, playerId).currentHandId;
+      return { ...s, hands: { ...s.hands, [handId]: { handId, cardInstanceIds: s.hands[handId].cardInstanceIds.slice(0, count) } } };
+    };
+    state = shrink(state, b.playerId, 2);
+    state = shrink(state, c.playerId, 2);
+    state = shrink(state, d.playerId, 2);
+
+    const defId = Object.values(state.cardDefinitions).find((def) => def.type === "GIVE_TWO_TO_LOWEST" && def.color === state.activeColor)!.defId;
+    const [instanceId] = Object.entries(state.cardInstanceRegistry).find(([, id]) => id === defId)!;
+    state = giveCardToPlayer(state, a.playerId, instanceId);
+
+    const result = playCard(state, a.playerId, instanceId);
+    expect(getHandOfPlayer(result.state, b.playerId).cardInstanceIds.length).toBe(3);
+    expect(getHandOfPlayer(result.state, c.playerId).cardInstanceIds.length).toBe(3);
+    expect(getHandOfPlayer(result.state, d.playerId).cardInstanceIds.length).toBe(3);
+  });
+});
+
+describe("draw stack topping rule (ACTION_CHAOS_LIFECYCLE spec sections 8/9/16)", () => {
+  it("allows Draw 4 to top an active Draw 2 stack (value >= lastDrawValue, not same-type)", () => {
+    let state = newGame(["A", "B"]);
+    const [a] = state.players;
+    const draw2Def = Object.values(state.cardDefinitions).find((d) => d.type === "DRAW_2" && d.color === state.activeColor)!.defId;
+    const [draw2Instance] = Object.entries(state.cardInstanceRegistry).find(([, defId]) => defId === draw2Def)!;
+    state = giveCardToPlayer(state, a.playerId, draw2Instance);
+    const afterDraw2 = playCard(state, a.playerId, draw2Instance).state;
+
+    const draw4Def = Object.values(afterDraw2.cardDefinitions).find((d) => d.type === "DRAW_4")!;
+    expect(isPlayable(draw4Def, afterDraw2)).toBe(true);
+    expect(afterDraw2.pendingEffect).toEqual(expect.objectContaining({ amount: 2, lastDrawValue: 2, terminal: false }));
+  });
+
+  it("forbids Draw 2 from topping an active Draw 4 stack", () => {
+    let state = newGame(["A", "B"]);
+    const [a] = state.players;
+    const draw4Def = Object.values(state.cardDefinitions).find((d) => d.type === "DRAW_4" && d.color === state.activeColor)!.defId;
+    const [draw4Instance] = Object.entries(state.cardInstanceRegistry).find(([, defId]) => defId === draw4Def)!;
+    state = giveCardToPlayer(state, a.playerId, draw4Instance);
+    const afterDraw4 = playCard(state, a.playerId, draw4Instance).state;
+
+    const draw2Def = Object.values(afterDraw4.cardDefinitions).find((d) => d.type === "DRAW_2")!;
+    expect(isPlayable(draw2Def, afterDraw4)).toBe(false);
+  });
+
+  it("a Chaos terminal draw (Wild Draw 6) can top a normal stack but then locks it - nothing may top it afterward", () => {
+    let state = newGame(["A", "B", "C"]);
+    const [a, b] = state.players;
+    const draw2Def = Object.values(state.cardDefinitions).find((d) => d.type === "DRAW_2" && d.color === state.activeColor)!.defId;
+    const [draw2Instance] = Object.entries(state.cardInstanceRegistry).find(([, defId]) => defId === draw2Def)!;
+    state = giveCardToPlayer(state, a.playerId, draw2Instance);
+    let working = playCard(state, a.playerId, draw2Instance).state; // A -> B, stack = 2
+
+    const wild6Def = Object.values(working.cardDefinitions).find((d) => d.type === "WILD_DRAW_6")!;
+    const [wild6Instance] = Object.entries(working.cardInstanceRegistry).find(([, defId]) => defId === wild6Def.defId)!;
+    working = giveCardToPlayer(working, b.playerId, wild6Instance);
+    expect(isPlayable(wild6Def, working)).toBe(true); // 6 >= 2, still toppable before it's played
+
+    working = playCard(working, b.playerId, wild6Instance, { chosenColor: "RED" }).state; // B -> C, stack = 8, now terminal
+    expect(working.pendingEffect).toEqual(expect.objectContaining({ amount: 8, lastDrawValue: 6, terminal: true }));
+
+    const anotherDraw4 = Object.values(working.cardDefinitions).find((d) => d.type === "DRAW_4")!;
+    const anotherWild10 = Object.values(working.cardDefinitions).find((d) => d.type === "WILD_DRAW_10")!;
+    expect(isPlayable(anotherDraw4, working)).toBe(false); // locked - even a normally-legal higher/equal value is rejected
+    expect(isPlayable(anotherWild10, working)).toBe(false); // locked - even a second terminal card is rejected
+  });
+});
+
+describe("WILD_COLOR_ROULETTE (ACTION_CHAOS_LIFECYCLE spec section 20)", () => {
+  it("has no color choice, sets a random player/color, and forces direction to clockwise even when it was counter-clockwise before", () => {
+    let state = { ...newGame(["A", "B", "C"]), direction: -1 as const };
+    const [a] = state.players;
+    const def = Object.values(state.cardDefinitions).find((d) => d.type === "WILD_COLOR_ROULETTE")!;
+    const [instanceId] = Object.entries(state.cardInstanceRegistry).find(([, defId]) => defId === def.defId)!;
+    state = giveCardToPlayer(state, a.playerId, instanceId);
+
+    // No chosenColor supplied at all - unlike every other Wild/Chaos card, this must resolve atomically anyway.
+    const result = playCard(state, a.playerId, instanceId);
+    expect(result.requiresColorChoice).toBe(false);
+    expect(result.state.phase).toBe("WAITING_FOR_PLAY");
+    expect(result.state.direction).toBe(1);
+    expect(["RED", "BLUE", "GREEN", "YELLOW", "VIOLET"]).toContain(result.state.activeColor);
+    expect(result.state.players.some((p) => p.playerId === result.state.currentPlayerId)).toBe(true);
+  });
+
+  it("a supplied chosenColor is ignored - the engine's own random pick always wins", () => {
+    let state = newGame(["A", "B", "C"]);
+    const [a] = state.players;
+    const def = Object.values(state.cardDefinitions).find((d) => d.type === "WILD_COLOR_ROULETTE")!;
+    const [instanceId] = Object.entries(state.cardInstanceRegistry).find(([, defId]) => defId === def.defId)!;
+    state = giveCardToPlayer(state, a.playerId, instanceId);
+
+    // Deterministic rng always returning 0 -> engine always picks the first active player and RED, regardless of the (bogus) chosenColor passed in.
+    const zeroRng = () => 0;
+    const result = playCard(state, a.playerId, instanceId, { chosenColor: "VIOLET" }, undefined, zeroRng);
+    expect(result.state.activeColor).toBe("RED");
+    expect(result.state.currentPlayerId).toBe(state.players[0].playerId);
+  });
+});
+
+describe("player state stays bound to the player, not the hand (ACTION_CHAOS_LIFECYCLE spec section 24)", () => {
+  it("a TIMEOUT mark on a player survives that player's hand being swapped away", () => {
+    let state = newGame(["A", "B", "C"]);
+    const [a, , c] = state.players;
+    state = { ...state, pendingSkipTargets: { [c.playerId]: 2 } }; // C already has 2 pending TIMEOUTs
+
+    const swapDefId = Object.values(state.cardDefinitions).find((d) => d.type === "SWAP_HAND")!.defId;
+    const [instanceId] = Object.entries(state.cardInstanceRegistry).find(([, defId]) => defId === swapDefId)!;
+    state = giveCardToPlayer(state, a.playerId, instanceId);
+    const played = playCard(state, a.playerId, instanceId, { chosenColor: "VIOLET" });
+    const finalState = chooseSwapTarget(played.state, a.playerId, c.playerId);
+
+    // A and C's hands are now swapped, but the TIMEOUT count is still keyed
+    // to C's playerId, not to whichever hand C happens to hold right now.
+    expect(finalState.pendingSkipTargets[c.playerId]).toBe(2);
+    expect(finalState.pendingSkipTargets[a.playerId]).toBeUndefined();
+  });
+
+  it("a TIMEOUT mark on a player survives a global hand rotation", () => {
+    let state = newGame(["A", "B", "C"]);
+    const [a, , c] = state.players;
+    state = { ...state, pendingSkipTargets: { [c.playerId]: 1 } };
+
+    const rotateDefId = Object.values(state.cardDefinitions).find((d) => d.type === "ROTATE_HANDS")!.defId;
+    const [instanceId] = Object.entries(state.cardInstanceRegistry).find(([, defId]) => defId === rotateDefId)!;
+    state = giveCardToPlayer(state, a.playerId, instanceId);
+    const finalState = playCard(state, a.playerId, instanceId, { chosenColor: "RED" }).state;
+
+    expect(finalState.pendingSkipTargets[c.playerId]).toBe(1);
+  });
+});
+
+describe("WILD_REVERSE_DRAW_4 (ACTION_CHAOS_LIFECYCLE spec section 17)", () => {
+  it("flips direction first, then sends the whole draw to whoever is next in the NEW direction", () => {
+    let state = newGame(["A", "B", "C"]); // clockwise: A -> B -> C -> A
+    const [a, , c] = state.players;
+    const defId = Object.values(state.cardDefinitions).find((d) => d.type === "WILD_REVERSE_DRAW_4")!.defId;
+    const [instanceId] = Object.entries(state.cardInstanceRegistry).find(([, id]) => id === defId)!;
+    state = giveCardToPlayer(state, a.playerId, instanceId);
+
+    const result = playCard(state, a.playerId, instanceId, { chosenColor: "RED" });
+    expect(result.state.direction).toBe(-1);
+    // Counter-clockwise from A is C, not B (the pre-reverse "next player").
+    expect(result.state.currentPlayerId).toBe(c.playerId);
+    expect(result.state.pendingEffect).toEqual(expect.objectContaining({ amount: 4, lastDrawValue: 4, terminal: true }));
   });
 });
 

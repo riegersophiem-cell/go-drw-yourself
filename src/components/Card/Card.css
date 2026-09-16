@@ -6,6 +6,13 @@
  */
 .uno-card {
   --card-aspect: 5 / 7; /* matches the 750x1050 artwork exactly */
+  /* Explicit so a display-mode card (rendered as a bare <picture>, which
+     defaults to display:inline) actually honours its width class instead of
+     silently falling back to the source image's intrinsic pixel size — a
+     latent bug only masked where a container happened to constrain width
+     itself (e.g. the old table's CSS-grid tracks). Buttons (interactive hand
+     cards) were already inline-block by default, so this is a no-op there. */
+  display: inline-block;
   position: relative;
   aspect-ratio: var(--card-aspect);
   border-radius: 12px;

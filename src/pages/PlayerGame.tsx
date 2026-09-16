@@ -7,12 +7,14 @@ import { usePendingAction } from "../hooks/usePendingAction";
 import { useTurnPlayback } from "../hooks/useTurnPlayback";
 import { isSameLogicalAction } from "../multiplayer/pendingAction";
 import { PlayerHand } from "../components/PlayerHand/PlayerHand";
-import { Table } from "../components/Table/Table";
+import { GameTable } from "../components/GameTable/GameTable";
+import { HandDock } from "../components/GameTable/HandDock";
 import { WinnerOverlay } from "../components/WinnerOverlay/WinnerOverlay";
 import type { GameAction } from "../game/actions";
 import type { CardColor } from "../game/types";
 import { useIsRoomHost } from "../hooks/useIsRoomHost";
 import { useHasTableDevice } from "../hooks/useHasTableDevice";
+import { ThemeSwitch } from "../theme/ThemeSwitch";
 import "./PlayerGame.css";
 
 const COLOR_CHOICES: { color: CardColor; hex: string; label: string }[] = [
@@ -20,8 +22,9 @@ const COLOR_CHOICES: { color: CardColor; hex: string; label: string }[] = [
   { color: "BLUE", hex: "#3b82f6", label: "Blau" },
   { color: "GREEN", hex: "#22c55e", label: "Grün" },
   { color: "YELLOW", hex: "#eab308", label: "Gelb" },
+  { color: "VIOLET", hex: "#7047EB", label: "Violett" },
 ];
-const COLOR_ORDER: Record<CardColor, number> = { RED: 0, YELLOW: 1, GREEN: 2, BLUE: 3, WILD: 4 };
+const COLOR_ORDER: Record<CardColor, number> = { RED: 0, YELLOW: 1, GREEN: 2, BLUE: 3, VIOLET: 4, WILD: 5 };
 
 export interface PlayerGameProps { session: DeviceSession; }
 
@@ -30,7 +33,7 @@ export function PlayerGame({ session }: PlayerGameProps) {
   const { publicState, privateState, players, presentationQueue, acknowledgePresentationBatch, clearPresentationQueue } = useRoomRealtime(session.roomId, session);
   const botPlayerIds = useMemo(() => publicState?.players.filter((player) => player.type === "BOT").map((player) => player.playerId) ?? [], [publicState?.players]);
   const playback = useTurnPlayback({ queue: presentationQueue, gameId: publicState?.gameId ?? null, acknowledgeBatch: acknowledgePresentationBatch, clearQueue: clearPresentationQueue, botPlayerIds });
-  const isHost = useIsRoomHost(session);
+  const { isHost } = useIsRoomHost(session);
   const hasTableDevice = useHasTableDevice(session.roomId);
   type PendingGameAction = { action: GameAction; expectedGameId: string | null; expectedVersion: number };
   const pendingAction = usePendingAction<PendingGameAction>();
@@ -101,7 +104,11 @@ export function PlayerGame({ session }: PlayerGameProps) {
     if (!selected || !privateState) return;
     const card = privateState.ownHand.find((item) => item.instanceId === selected);
     if (!card) return;
-    if (card.def.color === "WILD") { setShowColorPicker(true); return; }
+    // COLOR ROULETTE has no color choice at all - the engine picks the next
+    // player, color and direction at random server-side (see rulesEngine.ts's
+    // applyColorRoulette). Showing a color picker for it would be pure
+    // theater with no effect, so it's excluded from the generic WILD gate.
+    if (card.def.color === "WILD" && card.def.type !== "WILD_COLOR_ROULETTE") { setShowColorPicker(true); return; }
     void runAction({ type: "PLAY_CARD", cardInstanceId: selected });
   }
 
@@ -128,6 +135,12 @@ export function PlayerGame({ session }: PlayerGameProps) {
   }
 
   if (!publicState) return <div className="page page--centered">Lade Spiel…</div>;
+  // While a bot chain is being narrated, the board shown to GameTable follows
+  // the beat currently on screen instead of jumping straight to the final
+  // live state (see presentationState.ts — this is the bot-turn-timing fix).
+  // Everything else (isMyTurn, legal moves, hand data) keeps using the real
+  // publicState/privateState: those already gate on `!playback.isPlaying`.
+  const tableState = playback.presentationState ?? publicState;
   const ownPublicPlayer = publicState.players.find((player) => player.playerId === session.playerId);
   if (ownPublicPlayer?.eliminated && !ownPublicPlayer.connected) return <div className="page page--centered"><div className="panel"><h1>Du bist nicht mehr im Spiel</h1><p>Die übrigen Spieler spielen ohne dich weiter.</p><button className="btn btn--primary" onClick={() => { clearSession(); navigate("/"); }}>Zur Startseite</button></div></div>;
   // Checked before the eliminated-spectator branch and the privateState
@@ -140,7 +153,7 @@ export function PlayerGame({ session }: PlayerGameProps) {
     const winnerName = publicState.players.find((p) => p.playerId === publicState.winnerPlayerId)?.displayName ?? "?";
     return <WinnerOverlay session={session} winnerName={winnerName} players={players} gameId={publicState.gameId ?? null} version={publicState.version} />;
   }
-  if (ownPublicPlayer?.eliminated) return <main className="player-game player-game--spectating"><div className="player-game__board"><Table publicState={publicState} compact playback={playback.visibleBeat ? { beat: playback.visibleBeat, position: playback.position, total: playback.total, canSkip: playback.canSkip, onSkip: playback.skip, active: !!playback.activeBeat } : null} /></div><div className="player-game__spectator-note"><strong>Du bist ausgeschieden.</strong><span>Die Runde läuft weiter.</span><button type="button" onClick={() => void handleDeparture(session.playerId!, "LEAVE")}>Spiel verlassen</button></div></main>;
+  if (ownPublicPlayer?.eliminated) return <main className="player-game player-game--spectating"><div className="player-game__board"><GameTable publicState={tableState} mode="REMOTE_MOBILE_FULL" playback={playback.visibleBeat ? { beat: playback.visibleBeat, position: playback.position, total: playback.total, canSkip: playback.canSkip, onSkip: playback.skip, active: !!playback.activeBeat } : null} /></div><div className="player-game__spectator-note"><strong>Du bist ausgeschieden.</strong><span>Die Runde läuft weiter.</span><button type="button" onClick={() => void handleDeparture(session.playerId!, "LEAVE")}>Spiel verlassen</button></div></main>;
   if (!privateState) return <div className="page page--centered">Lade Spiel…</div>;
 
   const canUseMainActions = handOpen && isMyTurn && !busy && !playback.isPlaying && !needsColor && !needsSwapTarget && !needsSkipTarget && !needsExtraDiscard;
@@ -157,13 +170,14 @@ export function PlayerGame({ session }: PlayerGameProps) {
             <button type="button" aria-pressed={effectiveHandOnly} onClick={() => { setHandOpen(true); setHandOnly(true); }}>Nur meine Hand</button>
           </div>}
           <div className="player-game__meta"><span aria-hidden="true">♙</span><strong>{publicState.players.filter((player) => !player.eliminated).length} / 8</strong></div>
+          <ThemeSwitch />
           <button type="button" onClick={() => void handleDeparture(session.playerId!, "LEAVE")}>Aufgeben</button>
         </div>
       </header>
 
-      <div className="player-game__board"><Table publicState={publicState} compact ownPlayerId={session.playerId ?? undefined} canRemovePlayers={isHost && !playback.isPlaying} removingPlayerId={removingPlayerId} onRemovePlayer={(playerId) => void handleDeparture(playerId, "REMOVE")} playback={playback.visibleBeat ? { beat: playback.visibleBeat, position: playback.position, total: playback.total, canSkip: playback.canSkip, onSkip: playback.skip, active: !!playback.activeBeat } : null} /></div>
+      <div className="player-game__board"><GameTable publicState={tableState} mode="REMOTE_MOBILE_FULL" ownPlayerId={session.playerId ?? undefined} canRemovePlayers={isHost && !playback.isPlaying} removingPlayerId={removingPlayerId} onRemovePlayer={(playerId) => void handleDeparture(playerId, "REMOVE")} playback={playback.visibleBeat ? { beat: playback.visibleBeat, position: playback.position, total: playback.total, canSkip: playback.canSkip, onSkip: playback.skip, active: !!playback.activeBeat } : null} /></div>
 
-      <section className="player-game__dock" aria-label="Deine Karten und Aktionen">
+      <HandDock className="player-game__dock" aria-label="Deine Karten und Aktionen">
         {effectiveHandOnly && <div className="player-game__hand-only-status" role="status">
           <strong>{isMyTurn ? "Du bist dran" : `${publicState.players.find((player) => player.playerId === publicState.currentPlayerId)?.displayName ?? "Nächster Spieler"} ist dran`}</strong>
           <span>{publicState.pendingEffect?.type === "DRAW_STACK" ? `Aktiver Ziehstapel: +${publicState.pendingEffect.amount}` : `${privateState.ownHand.length} Karten auf deiner Hand`}</span>
@@ -175,10 +189,13 @@ export function PlayerGame({ session }: PlayerGameProps) {
         {needsSkipTarget && <div className="player-game__choice"><strong>Spieler aussetzen</strong><div className="player-game__targets">{otherActiveCandidates.map((p) => <button key={p.playerId} disabled={playback.isPlaying} onClick={() => void runAction({ type: "CHOOSE_SKIP_TARGET", targetPlayerId: p.playerId })}>{p.displayName} · {p.cardCount}</button>)}</div></div>}
         {needsExtraDiscard && <p className="player-game__instruction">Wähle eine zusätzliche Karte zum Abwerfen.</p>}
 
-        {handOpen && <><button className={`player-game__sort ${sorted ? "player-game__sort--active" : ""}`} type="button" onClick={() => setSorted((value) => !value)}><span aria-hidden="true">⇅</span> Sortieren</button>
-          <div className={`player-game__hand-wrap ${selectionLocked || showColorPicker ? "player-game__hand-wrap--receded" : ""}`}><PlayerHand cards={displayedHand} legalInstanceIds={legalIds} selectedInstanceId={selected} disabled={!isMyTurn || busy || playback.isPlaying || selectionLocked || showColorPicker} onSelect={handleSelect} /></div>
-          <div className="player-game__actions"><button className="player-game__play" disabled={!canUseMainActions || !selected} onClick={playSelected}><span aria-hidden="true">▶</span>Karte spielen</button><button className="player-game__draw" disabled={!canUseMainActions} onClick={() => void runAction({ type: "DRAW_CARD" })}><span aria-hidden="true">▣</span>Karte ziehen</button></div></>}
-      </section>
+        {handOpen && <>
+          <div className={`player-game__hand-wrap ${selectionLocked || showColorPicker ? "player-game__hand-wrap--receded" : ""}`}>
+            <button className={`player-game__sort ${sorted ? "player-game__sort--active" : ""}`} type="button" onClick={() => setSorted((value) => !value)} aria-pressed={sorted}><span aria-hidden="true">⇅</span> Sortieren</button>
+            <PlayerHand cards={displayedHand} legalInstanceIds={legalIds} selectedInstanceId={selected} disabled={!isMyTurn || busy || playback.isPlaying || selectionLocked || showColorPicker} onSelect={handleSelect} />
+          </div>
+          <div className="player-game__actions"><button className={`player-game__play ${selected ? "player-game__play--ready" : ""}`} disabled={!canUseMainActions || !selected} onClick={playSelected}><span aria-hidden="true">▶</span>Karte spielen</button><button className="player-game__draw" disabled={!canUseMainActions} onClick={() => void runAction({ type: "DRAW_CARD" })}><span aria-hidden="true">▣</span>Karte ziehen</button></div></>}
+      </HandDock>
     </main>
   );
 }

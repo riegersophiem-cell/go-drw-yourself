@@ -1,25 +1,41 @@
 .player-hand {
   display: flex;
-  justify-content: flex-start;
+  align-items: flex-end;
+  justify-content: center;
+  overflow: visible;
+  padding: 22px 0 calc(var(--fan-bottom-reserve, 48px) + env(safe-area-inset-bottom));
+  width: 100%;
+}
+
+.player-hand__rows {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+}
+
+/* Rows after the first pull up over the previous row's lower half — the
+   colour/icon in each card's top area (see Card.css) always stays clear of
+   the overlap, per the "row overlap must not hide identity" rule. Overlap
+   grows a bit with row count since the dock's vertical space is fixed. */
+.player-hand__row + .player-hand__row { margin-top: clamp(-46px, -8vh, -30px); }
+.player-hand--rows-3 .player-hand__row + .player-hand__row { margin-top: clamp(-54px, -9vh, -36px); }
+
+.player-hand__row {
+  width: 100%;
+  min-width: 0;
   overflow-x: auto;
   overflow-y: visible;
-  /* Bottom padding must clear the fanned cards' rotate+translateY visual
-     extent (see FAN_BOTTOM_RESERVE_PX in PlayerHand.tsx) plus the device
-     safe area, or an ancestor's overflow:hidden clips the outer cards. */
-  padding: 22px 0 calc(var(--fan-bottom-reserve, 48px) + env(safe-area-inset-bottom));
   scrollbar-width: none;
   overscroll-behavior-inline: contain;
   -webkit-overflow-scrolling: touch;
   scroll-padding-inline: 42px;
-  /* The visible strip is often much narrower than the fanned hand (down to
-     ~190px on a narrow phone with the sort/action columns either side), so
-     cards get hard-clipped by this scroll viewport's edge mid-scroll. The
-     fan's own inline padding (see below) keeps this fade clear of the
-     actual first/last card at the scroll extremes, so nothing reachable
-     ever fades - only the abrupt clip line becomes a soft edge instead. */
   -webkit-mask-image: linear-gradient(to right, transparent, black 26px, black calc(100% - 26px), transparent);
   mask-image: linear-gradient(to right, transparent, black 26px, black calc(100% - 26px), transparent);
+  transform: translateX(var(--row-indent, 0px));
 }
+.player-hand__row::-webkit-scrollbar { height: 0; }
 
 .player-hand__fan {
   display: flex;
@@ -29,7 +45,16 @@
   min-width: 100%;
   box-sizing: border-box;
   padding-inline: max(42px, 11vw);
+  transform-origin: 50% 100%;
 }
+
+/* Multi-row hands: overlap does most of the compression (see margins above);
+   a moderate uniform scale-down on top of that keeps 2-3 rows readable
+   without shrinking any single card too aggressively (priority order per
+   spec: overlap first, size second, scroll last — scrolling inside a row
+   already exists above as the final fallback). */
+.player-hand--rows-2 .player-hand__fan { transform: scale(.94); }
+.player-hand--rows-3 .player-hand__fan { transform: scale(.82); }
 
 .player-hand__slot {
   margin-right: clamp(-42px, -3vw, -25px);
@@ -55,8 +80,6 @@
   padding: 20px;
 }
 
-.player-hand::-webkit-scrollbar { height: 0; }
-
 @keyframes hand-card-deal {
   from { opacity: 0; translate: 0 34px; scale: .88; }
   to { opacity: 1; translate: 0 0; scale: 1; }
@@ -69,4 +92,6 @@
 @media (max-width: 420px) {
   .player-hand__fan { padding-inline: 54px; }
   .player-hand__slot { margin-right: -28px; }
+  .player-hand--rows-2 .player-hand__fan { transform: scale(.9); }
+  .player-hand--rows-3 .player-hand__fan { transform: scale(.76); }
 }

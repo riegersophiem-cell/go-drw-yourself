@@ -39,6 +39,8 @@ export function chooseBotAction(context: BotDecisionContext, level: BotStrategyL
         return 80;
       case "SKIP_EVERYONE":
         return 70;
+      case "DRAW_4":
+        return 65;
       case "DRAW_2":
         return 60;
       case "SKIP":
@@ -59,8 +61,10 @@ export function chooseBotAction(context: BotDecisionContext, level: BotStrategyL
 }
 
 function chosenColorFor(def: CardDefinition, context: BotDecisionContext): CardColor | undefined {
-  if (def.color !== "WILD") return undefined;
-  const counts: Record<Exclude<CardColor, "WILD">, number> = { RED: 0, BLUE: 0, GREEN: 0, YELLOW: 0 };
+  // COLOR ROULETTE picks its own color server-side at random - a bot "choice"
+  // here would be computed and silently discarded, so skip it entirely.
+  if (def.color !== "WILD" || def.type === "WILD_COLOR_ROULETTE") return undefined;
+  const counts: Record<Exclude<CardColor, "WILD">, number> = { RED: 0, BLUE: 0, GREEN: 0, YELLOW: 0, VIOLET: 0 };
   for (const { def: cardDef } of context.ownHand) {
     if (cardDef.color !== "WILD") counts[cardDef.color] += 1;
   }

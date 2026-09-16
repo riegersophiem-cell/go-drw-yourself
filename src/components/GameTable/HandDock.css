@@ -1,0 +1,21 @@
+.hand-dock {
+  position: relative;
+  z-index: 10;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 168px;
+  align-items: center;
+  min-height: 0;
+  padding: 30px 26px 6px;
+  border: 1px solid var(--glass-border);
+  border-bottom: 0;
+  border-radius: 28px 28px 0 0;
+  color: var(--text-inverse);
+  background: var(--glass-bg);
+  box-shadow: 0 -16px 44px rgba(0, 0, 0, .12), inset 0 1px rgba(255, 255, 255, .1);
+  backdrop-filter: blur(18px) saturate(140%);
+  isolation: isolate;
+}
+
+@media (max-width: 760px) {
+  .hand-dock { grid-template-columns: minmax(0, 1fr) 72px; padding: 26px 4px 2px; }
+}

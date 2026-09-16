@@ -33,7 +33,21 @@ export function deriveGameActionEvents(before: GameState, after: GameState, acto
       const card = definitionOfInstance(before, action.cardInstanceId);
       result.push(event("PLAY_CARD", actorPlayerId, { playerId: actorPlayerId, color: card.color, cardType: card.type }, after.version));
       if (action.chosenColor) result.push(event("CHOSE_COLOR", actorPlayerId, { playerId: actorPlayerId, color: action.chosenColor }, after.version));
-      if (card.type === "ROTATE_HANDS") result.push(event("HANDS_ROTATED", actorPlayerId, {}, after.version));
+      // WILD_COLOR_ROULETTE never takes a chosenColor from the caller (the
+      // engine picks it at random, see rulesEngine.ts's applyColorRoulette) -
+      // without this, the resulting color would never appear anywhere in the
+      // event/beat stream, even though it's already live in `after`.
+      else if (card.type === "WILD_COLOR_ROULETTE" && after.activeColor) {
+        result.push(event("CHOSE_COLOR", actorPlayerId, { playerId: actorPlayerId, color: after.activeColor }, after.version));
+      }
+      // ROTATE_HANDS is now Chaos (colorless) and its color choice can be
+      // deferred to a separate CHOOSE_COLOR action (see rulesEngine.ts
+      // playCard's WAITING_FOR_COLOR path) - the rotation itself only runs
+      // once that color is known, so only report it here when this same
+      // PLAY_CARD call resolved it immediately (chosenColor was supplied
+      // upfront, e.g. by a bot). The deferred case is reported from the
+      // CHOOSE_COLOR branch below instead.
+      if (card.type === "ROTATE_HANDS" && action.chosenColor) result.push(event("HANDS_ROTATED", actorPlayerId, {}, after.version));
       const beforeStack = before.pendingEffect?.type === "DRAW_STACK" ? before.pendingEffect.amount : 0;
       const afterStack = after.pendingEffect?.type === "DRAW_STACK" ? after.pendingEffect.amount : 0;
       if (afterStack > beforeStack) {
@@ -60,9 +74,18 @@ export function deriveGameActionEvents(before: GameState, after: GameState, acto
       else result.push(event("DRAW", actorPlayerId, { playerId: actorPlayerId, count }, after.version));
       break;
     }
-    case "CHOOSE_COLOR":
+    case "CHOOSE_COLOR": {
       result.push(event("CHOSE_COLOR", actorPlayerId, { playerId: actorPlayerId, color: action.color }, after.version));
+      // The deferred card (SWAP_HAND/ROTATE_HANDS/any Chaos card) is still on
+      // top of the discard pile from the original PLAY_CARD call - if it was
+      // ROTATE_HANDS, the rotation itself only just happened as part of
+      // resolving this CHOOSE_COLOR action, so report it here (see the
+      // matching comment in the PLAY_CARD branch above).
+      const deferredTopId = before.discardPile.at(-1);
+      const deferredCard = deferredTopId ? definitionOfInstance(before, deferredTopId) : null;
+      if (deferredCard?.type === "ROTATE_HANDS") result.push(event("HANDS_ROTATED", actorPlayerId, {}, after.version));
       break;
+    }
     case "CHOOSE_SWAP_TARGET":
       result.push(event("CHOSE_SWAP_TARGET", actorPlayerId, { playerId: actorPlayerId, targetPlayerId: action.targetPlayerId }, after.version));
       result.push(event("HANDS_SWAPPED", actorPlayerId, { playerAId: actorPlayerId, playerBId: action.targetPlayerId }, after.version));

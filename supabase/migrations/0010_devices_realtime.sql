@@ -1,0 +1,20 @@
+-- MIGRATION REQUIRED — see LOBBY_SESSION_FLOW_REPORT.md.
+--
+-- `devices` was never added to the `supabase_realtime` publication (only
+-- `players` and `rooms` were, in 0003_realtime_publication.sql). This means
+-- `useHasTableDevice`'s `postgres_changes` subscription on `devices` never
+-- actually fires — found live while testing the new Lobby table-device
+-- indicator: a table device joining an already-open Lobby tab never flipped
+-- its "Kein Tischgerät" status to "Verbunden" without a full page reload.
+--
+-- This is not new breakage from this phase — `useHasTableDevice` has been
+-- used by PlayerGame.tsx since an earlier phase (to show/hide the "Nur
+-- meine Hand" toggle) and has silently had the same non-reactivity there:
+-- a table device connecting or disconnecting *during* an already-open
+-- PlayerGame session would never update the toggle's visibility without a
+-- reload either.
+--
+-- NOT applied to the live project by this change — local migration file
+-- only, per explicit instruction. Apply with `supabase db push` (or the
+-- project's normal migration flow) once approved.
+alter publication supabase_realtime add table devices;

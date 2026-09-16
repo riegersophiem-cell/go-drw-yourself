@@ -42,10 +42,10 @@ export interface GameEventBatch {
   events: PendingGameEvent[];
 }
 
-const COLORS = new Set<CardColor>(["RED", "BLUE", "GREEN", "YELLOW", "WILD"]);
+const COLORS = new Set<CardColor>(["RED", "BLUE", "GREEN", "YELLOW", "VIOLET", "WILD"]);
 const CARD_TYPES = new Set<CardType>([
   "TRIANGLE", "SQUARE", "CIRCLE", "DIAMOND", "SEMICIRCLE", "ROTATE_HANDS", "TARGET_SKIP",
-  "GIVE_TWO_TO_LOWEST", "DISCARD_ONE_EXTRA", "SWAP_HAND", "SKIP", "REVERSE", "DRAW_1", "DRAW_2",
+  "GIVE_TWO_TO_LOWEST", "DISCARD_ONE_EXTRA", "SWAP_HAND", "SKIP", "REVERSE", "DRAW_1", "DRAW_2", "DRAW_4",
   "WILD", "WILD_DRAW_4", "WILD_DRAW_6", "WILD_DRAW_10", "SKIP_EVERYONE", "DISCARD_ALL",
   "WILD_REVERSE_DRAW_4", "WILD_COLOR_ROULETTE",
 ]);

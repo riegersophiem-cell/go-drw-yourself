@@ -52,6 +52,16 @@ Das Dock war vollständig transparent. Es verwendet jetzt eine sehr leichte, dur
 - Browser: TABLE-Gerät verbunden, Umschalter erscheint, reduzierte Ansicht aktivierbar, Rückschaltung stellt den Tisch wieder her
 - Browser: Reload reconnectet denselben Spieler und zeigt die Reconnect-Bestätigung
 
-## Offene Produktionsprüfung
+## Deployment und Produktionsprüfung
 
-Die neuen Änderungen sind lokal geprüft und noch nicht auf Vercel veröffentlicht. Nach dem Deployment sollten ein echter Tab-Schließen/Neuöffnen-Test im selben Browserprofil, ein Fünf-Sekunden-Bot-Timing-Test und die sechs Zielgrößen aus dem Auftrag noch einmal gegen die Produktionsadresse geprüft werden.
+Commit `810458f` wurde nach `master` gepusht und anschließend als Produktion auf Vercel veröffentlicht. Die kanonische Adresse `https://go-drw-yourself.vercel.app/` zeigt das neue Bundle.
+
+Live bestätigt wurden:
+
+- Ein Raum wurde in der Produktion erstellt; nach einem Reload wurde derselbe Spielerplatz wiederhergestellt und „Du bist wieder im Spiel.“ angezeigt.
+- Ein echtes TABLE-Gerät wurde über den Raum-Link verbunden. Danach erschien auf dem Player-Gerät der Umschalter „Vollständige Ansicht“ / „Nur meine Hand“.
+- „Nur meine Hand“ blendete den öffentlichen Tisch aus und ließ Hand, Aktionen und Zugstatus bedienbar; die Auswahl ließ sich wieder zurückschalten.
+- Während der fünfsekündigen Playback-Phase blieben die lokalen Kartenaktionen erwartungsgemäß gesperrt und wurden danach wieder freigegeben.
+- „Spieler einladen“ ist in der produktiven Lobby verfügbar; die bereits vorhandene gebrandete 1200×630-Linkvorschau bleibt Bestandteil des Deployments.
+
+Vercel-Deployment: `dpl_8BUUJgmgXDiXtsuJNHEngfnicgg4` (`READY`).

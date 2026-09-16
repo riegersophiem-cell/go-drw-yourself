@@ -1,0 +1,346 @@
+.player-ring--full {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+}
+
+/* ===== TABLE_DEVICE Player Unit (avatar-dominant, small attached info pill) =====
+   Reconstructed from the project's earlier avatar-forward table design
+   (see PLAYER_UNIT_FIX_REPORT.md) — a large, mostly-transparent avatar
+   illustration overlaps a small rounded glass pill carrying name/role/count,
+   instead of the avatar sitting inside a big uniform card. Orientation
+   (avatar left/right/top/bottom of its pill) follows seatOrientation() in
+   PlayerRing.tsx so the avatar always leans toward the Hero Center. */
+.player-unit {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  transition: filter .22s ease;
+}
+/* DOM order is always [avatar, pill] — flex-direction alone decides which
+   side each visually lands on. Seats left of center need the avatar to end
+   up on the RIGHT (toward the middle), which is row-reverse for a
+   [avatar, pill] source order (reverses the whole row, putting pill first/
+   left and avatar last/right) — and the mirror for every other side. */
+.player-unit--left { flex-direction: row-reverse; }
+.player-unit--right { flex-direction: row; }
+.player-unit--top { flex-direction: column-reverse; }
+.player-unit--bottom { flex-direction: column; }
+
+.player-unit__avatar {
+  position: relative;
+  z-index: 2;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: clamp(56px, 5.4vw, 76px);
+  height: clamp(56px, 5.4vw, 76px);
+  color: #fff;
+  font-weight: 900;
+  font-size: .8rem;
+  filter: drop-shadow(0 4px 9px rgba(20, 30, 50, .32));
+}
+.player-unit__avatar img { width: 100%; height: 100%; object-fit: contain; object-position: bottom center; }
+/* No illustrated avatar available (initials fallback only) — needs its own frame to stay legible against the table background. */
+.player-unit__avatar:not(:has(img)) {
+  border: 2px solid rgba(255, 255, 255, .65);
+  border-radius: 12px;
+  background: linear-gradient(145deg, #64748b, #0f172a);
+  filter: none;
+}
+.player-unit__avatar--bot:not(:has(img)) { background: linear-gradient(145deg, #a78bfa, #4c2fb0); }
+
+.player-unit__presence {
+  position: absolute;
+  right: 6%;
+  bottom: 6%;
+  width: 10px;
+  height: 10px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, .25);
+}
+.player-unit__presence--offline { background: #94a3b8; }
+
+.player-unit__pill {
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  width: max-content;
+  min-width: 76px;
+  max-width: 106px;
+  padding: 6px 10px;
+  border: 1px solid rgba(255, 255, 255, .14);
+  border-radius: 14px;
+  color: #f1f5fb;
+  background: linear-gradient(135deg, rgba(27, 43, 66, .9), rgba(10, 24, 43, .84));
+  box-shadow: 0 8px 18px rgba(20, 35, 60, .2), inset 0 1px rgba(255, 255, 255, .08);
+  backdrop-filter: blur(10px);
+  transition: border-color .18s ease, box-shadow .18s ease;
+}
+.player-unit__name {
+  overflow: hidden;
+  font-size: .7rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.player-unit__meta {
+  overflow: hidden;
+  color: #93a6bd;
+  font-size: .54rem;
+  letter-spacing: .03em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+/* Deliberately theme-constant, not tokenized: this pill's whole job is to be
+   the one bright chip among otherwise-dark Player Units (own-seat spotlight)
+   — it contrasts against ITS NEIGHBOURS, not the page, so it stays the same
+   bright plate in both Light and Dark. */
+.player-unit--own .player-unit__pill { background: linear-gradient(135deg, rgba(248, 250, 252, .96), rgba(229, 233, 241, .92)); color: #111827; }
+.player-unit--own .player-unit__meta { color: #64748b; }
+
+/* Avatar pulled toward its pill so the two read as one overlapping unit —
+   the amount (55% of the avatar's own width/height) is tuned so the pill's
+   edge sits roughly at the avatar's center, never past it. */
+.player-unit--left .player-unit__avatar { margin-left: -16%; }
+.player-unit--right .player-unit__avatar { margin-right: -16%; }
+.player-unit--top .player-unit__avatar { margin-top: -14%; }
+.player-unit--bottom .player-unit__avatar { margin-bottom: -14%; }
+
+/* Compensate on the pill's overlapped edge so the avatar covers its plain
+   background corner, never the name/count text itself. */
+.player-unit--left .player-unit__pill { padding-right: 16px; }
+.player-unit--right .player-unit__pill { padding-left: 16px; }
+.player-unit--top .player-unit__pill { padding-bottom: 11px; }
+.player-unit--bottom .player-unit__pill { padding-top: 11px; }
+
+.player-unit--active .player-unit__pill { border-color: #ffd250; box-shadow: 0 0 0 1.5px rgba(255, 210, 80, .32), 0 0 14px rgba(255, 190, 35, .3), 0 8px 18px rgba(20, 35, 60, .22); }
+.player-unit--highlight-actor .player-unit__pill { border-color: rgba(255, 190, 60, .85); box-shadow: 0 0 0 1.5px rgba(255, 190, 60, .26), 0 8px 18px rgba(150, 100, 20, .22); }
+.player-unit--highlight-target .player-unit__pill { border-color: rgba(239, 68, 68, .8); box-shadow: 0 0 0 1.5px rgba(239, 68, 68, .26), 0 8px 18px rgba(150, 30, 30, .2); }
+.player-unit--skipped { filter: grayscale(.5) opacity(.6); }
+.player-unit--draw-effect .player-unit__pill { border-color: rgba(37, 99, 235, .75); }
+
+/* ROTATE: every unit participates, so every unit gets the same gentle cue —
+   deliberately lighter than the actor/target highlights above so a single
+   "who initiated this" focus doesn't get lost among six equally-lit units. */
+.player-unit--rotate-participant .player-unit__pill { border-color: rgba(120, 170, 255, .6); box-shadow: 0 0 0 1.5px rgba(120, 170, 255, .22), 0 8px 18px rgba(20, 35, 60, .2); }
+
+/* SKIP ALL: everyone except the player staying at-turn visibly sits out. */
+.player-unit--skip-all-dim { filter: grayscale(.6) brightness(.55); transition: filter .3s ease; }
+
+.player-unit--editable { cursor: pointer; }
+.player-unit--editable:hover .player-unit__pill { border-color: rgba(112, 71, 235, .5); box-shadow: 0 0 0 2px rgba(112, 71, 235, .25), 0 10px 22px rgba(60, 40, 120, .22); }
+.player-unit--seat-selected .player-unit__pill { border-color: #7047eb; box-shadow: 0 0 0 2px rgba(112, 71, 235, .45), 0 12px 26px rgba(60, 40, 120, .3); }
+
+/* Docked close enough to overlap the unit's own bottom edge instead of
+   floating below it with a visible gap — reads as one integrated piece
+   (avatar + pill + badge) instead of three stacked elements (brief section
+   4/5). Deliberately small; the pill's own gold border+glow (below) already
+   carries most of the "it's their turn" signal. */
+.player-unit__turn-badge {
+  position: absolute;
+  z-index: 3;
+  bottom: -5px;
+  left: 50%;
+  transform: translateX(-50%) scale(.94);
+  padding: 2px 10px;
+  border: 1px solid rgba(255, 229, 140, .85);
+  border-radius: 999px;
+  color: #3a2600;
+  font-size: .5rem;
+  font-weight: 900;
+  letter-spacing: .04em;
+  white-space: nowrap;
+  background: linear-gradient(180deg, #ffe66f, #ffc936);
+  box-shadow: 0 3px 9px rgba(245, 170, 0, .32);
+}
+
+.player-unit__badge {
+  position: absolute;
+  z-index: 3;
+  top: -6px;
+  right: -6px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: .54rem;
+  font-weight: 900;
+  color: #fff;
+  white-space: nowrap;
+}
+/* A small, unambiguous icon docked at the avatar's own corner instead of a
+   full-text rectangle floating over the pill (brief section 13: "klein,
+   eindeutig, am Avatar/Infochip angedockt", not "großes rotes Rechteck"). */
+.player-unit__badge--skip {
+  top: -4px;
+  right: -4px;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  font-size: .62rem;
+  background: #ef4444;
+  border: 2px solid rgba(20, 10, 12, .5);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, .35);
+}
+.player-unit__badge--draw { background: #2563eb; }
+
+.player-unit__remove {
+  position: absolute;
+  z-index: 3;
+  top: -6px;
+  left: -6px;
+  width: 20px;
+  height: 20px;
+  border: 1px solid rgba(239, 68, 68, .4);
+  border-radius: 50%;
+  color: #ef4444;
+  font-weight: 900;
+  line-height: 1;
+  background: #fff;
+  cursor: pointer;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .player-unit { transition: none; }
+}
+/* ===== end Player Unit ===== */
+
+.player-ring__avatar {
+  position: relative;
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  overflow: hidden;
+  font-weight: 800;
+  color: var(--text-secondary);
+  background: var(--bg-surface-muted);
+}
+.player-ring__avatar img { width: 100%; height: 100%; object-fit: contain; object-position: bottom center; }
+.player-ring__avatar--bot { background: color-mix(in srgb, var(--accent-violet) 18%, var(--bg-surface-muted)); }
+
+.player-ring__presence {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  width: 10px;
+  height: 10px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: #22c55e;
+}
+.player-ring__presence--offline { background: #94a3b8; }
+
+.player-ring__copy { min-width: 0; color: var(--text-primary); }
+.player-ring__name { display: block; font-size: .74rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.player-ring__count { font-size: .58rem; color: var(--text-secondary); }
+
+.player-ring__badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: .58rem;
+  font-weight: 900;
+  color: #fff;
+}
+.player-ring__badge--skip { background: #ef4444; }
+.player-ring__badge--draw { background: #2563eb; }
+
+.player-ring__remove {
+  position: absolute;
+  top: -8px;
+  left: -8px;
+  width: 20px;
+  height: 20px;
+  border: 1px solid rgba(239, 68, 68, .4);
+  border-radius: 50%;
+  color: #ef4444;
+  font-weight: 900;
+  line-height: 1;
+  background: #fff;
+  cursor: pointer;
+}
+
+/* ===== Compact (REMOTE_MOBILE_FULL) ring — a real ellipse, not a strip =====
+   Follow-up to MOBILE_HAND_UI_FIX_REPORT.md: seats now sit ON the orbit
+   (computeCompactRingSeatPoints), the same way TABLE_DEVICE's do, instead of
+   wrapping in a horizontal chip strip above the table. Deliberately still a
+   lighter/smaller token than the full Player Unit — a round avatar with the
+   turn state expressed as a glow on the avatar itself, plus a small name tag
+   below it, not a pill with a background plate. */
+.player-ring--compact {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+}
+
+.player-ring__seat--compact {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  transition: filter .2s ease;
+}
+.player-ring__avatar-wrap { position: relative; }
+
+.player-ring__seat--compact .player-ring__avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, .85);
+  box-shadow: 0 3px 9px rgba(20, 40, 70, .2);
+  transition: border-color .2s ease, box-shadow .2s ease;
+}
+.player-ring__seat--compact .player-ring__copy {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1px 7px;
+  border-radius: 8px;
+  background: var(--bg-surface-elevated);
+  box-shadow: var(--shadow-soft);
+}
+.player-ring__seat--compact .player-ring__name { font-size: .5rem; max-width: 62px; text-align: center; }
+.player-ring__seat--compact .player-ring__count { font-size: .42rem; }
+.player-ring__seat--compact .player-ring__badge { top: -4px; right: -4px; padding: 1px 5px; font-size: .48rem; }
+
+/* Current player: a clear, unmissable active glow directly on the avatar —
+   stronger than before (brief follow-up: "aktueller Spieler deutlich
+   erhellen... stärker als momentan"), paired with the matching Orbit turn
+   arc (OrbitFlow.tsx) instead of a separate small dot badge. */
+.player-ring__seat--compact.player-ring__seat--active .player-ring__avatar {
+  border-color: #58a1ff;
+  box-shadow: 0 0 0 3px rgba(88, 148, 255, .45), 0 0 18px rgba(88, 148, 255, .6);
+}
+.player-ring__seat--compact.player-ring__seat--active .player-ring__copy {
+  background: var(--bg-surface-elevated);
+  box-shadow: 0 4px 14px rgba(88, 148, 255, .3);
+}
+/* Next-up: a subtle pre-highlight, the destination end of the turn arc. */
+.player-ring__seat--compact.player-ring__seat--next-up .player-ring__avatar {
+  border-color: rgba(88, 148, 255, .55);
+  box-shadow: 0 0 0 2px rgba(88, 148, 255, .2);
+}
+
+/* Mobile equivalents of the full-ring ROTATE/SKIP_ALL highlight classes
+   (see PlayerRing.tsx) — REMOTE_MOBILE_FULL has no ActionChoreography
+   flight, so these are the primary "who does this action affect" signal
+   on mobile (MOBILE_HAND_UI_FIX_REPORT.md). Targets the avatar itself now
+   that the seat is a frameless token, not a background pill. */
+.player-ring__seat--rotate-participant .player-ring__avatar { border-color: rgba(120, 170, 255, .8); box-shadow: 0 0 0 2px rgba(120, 170, 255, .35); }
+.player-ring__seat--skip-all-dim { filter: grayscale(.6) brightness(.7); opacity: .6; transition: filter .3s ease, opacity .3s ease; }
+.player-ring__seat--highlight-actor .player-ring__avatar { border-color: rgba(255, 190, 60, .95); box-shadow: 0 0 0 2px rgba(255, 190, 60, .4); }
+.player-ring__seat--highlight-target .player-ring__avatar { border-color: rgba(239, 68, 68, .9); box-shadow: 0 0 0 2px rgba(239, 68, 68, .35); }
+

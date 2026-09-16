@@ -15,6 +15,8 @@ export interface RoomPlayerRow {
   eliminated: boolean;
   connected: boolean;
   wins: number;
+  /** null for bots (they never get a devices row) and for a player whose device departed mid-game. */
+  device_id: string | null;
 }
 
 /**
@@ -35,11 +37,18 @@ export function useRoomRealtime(roomId: string | null, device?: { deviceId: stri
   const deviceRef = useRef(device);
   deviceRef.current = device;
   const lastKnownRef = useRef<KnownRoundState | null>(null);
+  // Tracks whatever `publicState` last rendered, so a new batch's own events
+  // can be replayed on top of the board as it looked right before this
+  // batch — not the final result the confirming refetch below is about to
+  // overwrite `publicState` with (see presentationState.ts's header comment
+  // for why this distinction is the actual bot-turn-timing fix).
+  const publicStateRef = useRef<PublicGameState | null>(null);
   const presentation = useEventPresentation();
 
   async function refetchAll(currentRoomId: string): Promise<PublicGameState | null> {
     const [pub, plist] = await Promise.all([fetchPublicState(currentRoomId), fetchPlayers(currentRoomId)]);
     setPublicState(pub);
+    publicStateRef.current = pub;
     setPlayers(plist as RoomPlayerRow[]);
     const dev = deviceRef.current;
     if (dev) {
@@ -52,6 +61,9 @@ export function useRoomRealtime(roomId: string | null, device?: { deviceId: stri
 
   async function handleBatchBroadcast(currentRoomId: string, payload: unknown) {
     const lastKnown = lastKnownRef.current;
+    // Snapshot BEFORE the confirming refetch (inside reconcileBroadcastPayload)
+    // overwrites publicStateRef with this batch's own final result.
+    const baseState = publicStateRef.current;
     const result = await reconcileBroadcastPayload({
       payload,
       lastKnown,
@@ -66,7 +78,13 @@ export function useRoomRealtime(roomId: string | null, device?: { deviceId: stri
     }
     if (result.kind !== "batch" || result.decision.kind === "discard") return;
     if (result.decision.resetQueue) presentation.resetQueue();
-    presentation.enqueueBatch(result.batch);
+    // baseState is only trustworthy as this batch's starting point when it's
+    // exactly the version the batch claims to extend from — otherwise (a
+    // missed broadcast, a reconnect mid-chain) fall back to null and let
+    // useTurnPlayback skip reconstruction for this batch rather than replay
+    // events onto a board they were never meant to follow.
+    const validBase = baseState && baseState.gameId === result.batch.gameId && baseState.version === result.batch.fromVersion ? baseState : null;
+    presentation.enqueueBatch({ ...result.batch, baseState: validBase });
   }
 
   useEffect(() => {

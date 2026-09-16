@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import type { GameEventBatch } from "../game/gameEvents";
+import type { PresentationBatch } from "../multiplayer/presentationState";
 
 /**
  * Paket 4: holds the queue of batches `useRoomRealtime` has decided are
@@ -9,9 +9,9 @@ import type { GameEventBatch } from "../game/gameEvents";
  * own, ahead of any visible UI consuming the queue.
  */
 export function useEventPresentation() {
-  const [queue, setQueue] = useState<GameEventBatch[]>([]);
+  const [queue, setQueue] = useState<PresentationBatch[]>([]);
 
-  const enqueueBatch = useCallback((batch: GameEventBatch) => {
+  const enqueueBatch = useCallback((batch: PresentationBatch) => {
     setQueue((prev) => [...prev, batch]);
   }, []);
 

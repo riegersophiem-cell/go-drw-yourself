@@ -1,0 +1,96 @@
+.orbit-flow {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.orbit-flow__track {
+  fill: none;
+  stroke: rgba(110, 145, 190, .26);
+  stroke-width: .45;
+  vector-effect: non-scaling-stroke;
+}
+
+.orbit-flow__pulse {
+  fill: none;
+  stroke: rgba(100, 160, 255, .72);
+  stroke-width: .7;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+  stroke-dasharray: 7 30;
+  animation: orbit-flow-cw 8s linear infinite;
+  filter: drop-shadow(0 0 4px rgba(100, 160, 255, .6));
+}
+/* A second, offset light so direction reads at a glance instead of relying
+   on catching one dash mid-motion (brief: "innerhalb 1 Sekunde erfassbar"). */
+.orbit-flow__pulse--b { animation-delay: -4s; opacity: .6; }
+
+.orbit-flow--ccw .orbit-flow__pulse { animation-direction: reverse; }
+
+.orbit-flow--reversing .orbit-flow__pulse {
+  animation-duration: 2.4s;
+  stroke: rgba(255, 255, 255, .9);
+  filter: drop-shadow(0 0 6px rgba(255, 255, 255, .8));
+}
+
+/* Four small markers that light up in sequence around the ring — a
+   direction cue readable from a single glance (or a still screenshot)
+   without falling back to a literal arrow/direction widget. */
+.orbit-flow__marker {
+  fill: rgba(150, 190, 255, .35);
+  filter: drop-shadow(0 0 3px rgba(100, 160, 255, .45));
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: orbit-flow-marker-chase 2s ease-in-out infinite;
+}
+.orbit-flow--reversing .orbit-flow__marker { fill: rgba(255, 255, 255, .8); animation-duration: .9s; }
+
+@keyframes orbit-flow-marker-chase {
+  0%, 75%, 100% { opacity: .35; transform: scale(1); }
+  25% { opacity: 1; transform: scale(1.6); }
+}
+
+@keyframes orbit-flow-cw {
+  to { stroke-dashoffset: -370; }
+}
+
+/* ===== Turn arc (REMOTE_MOBILE_FULL only) =====
+   Replaces the generic 4-marker chase with a direct "current -> next" read:
+   current player = the active-glow avatar (PlayerRing.css), next player =
+   a subtle pre-highlight, and the segment between them on the orbit itself
+   glows and carries a traveling light — direction is then obvious without
+   any separate reverse icon: reversing just flips which side of the current
+   player the bright segment points to (MOBILE_HAND_UI_FIX_REPORT.md
+   follow-up). When active, the generic ambient pulse recedes to near-nothing
+   so the two don't compete for attention. */
+.orbit-flow--turn-arc-mode .orbit-flow__pulse { opacity: .18; }
+.orbit-flow__turn-arc {
+  fill: none;
+  stroke: rgba(120, 178, 255, .95);
+  stroke-width: 1.1;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+  filter: drop-shadow(0 0 5px rgba(100, 160, 255, .85));
+  animation: orbit-flow-turn-arc-in .3s ease both;
+}
+.orbit-flow__turn-pulse {
+  fill: #eaf2ff;
+  filter: drop-shadow(0 0 5px rgba(150, 200, 255, .95));
+}
+@keyframes orbit-flow-turn-arc-in { from { opacity: 0; } to { opacity: 1; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .orbit-flow__pulse { animation: none; opacity: .5; }
+  .orbit-flow--reversing .orbit-flow__pulse { opacity: 1; }
+  .orbit-flow__marker { animation: none; opacity: .6; }
+  .orbit-flow__turn-arc { animation: none; }
+}
+
+/* Dark Mode: the static track needs a touch more presence against a much
+   darker page background than Light's — "Orbit subtil heller" (spec section
+   7), not a redesign, so only the always-visible track's own opacity moves. */
+:root[data-theme="dark"] .orbit-flow__track { stroke: rgba(140, 170, 210, .34); }

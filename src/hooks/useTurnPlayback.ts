@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { GameEventBatch } from "../game/gameEvents";
 import { buildPlaybackBeats, type PlaybackBeat } from "../multiplayer/playbackBeats";
 import { playbackDuration } from "../multiplayer/playbackMachine";
+import { buildPresentationSnapshots } from "../multiplayer/presentationState";
+import type { PresentationBatch } from "../multiplayer/presentationState";
+import type { PublicGameState } from "../game/types";
 
-interface ActiveBatch { batchId: string; gameId: string; beats: PlaybackBeat[]; }
+interface ActiveBatch { batchId: string; gameId: string; beats: PlaybackBeat[]; snapshots: PublicGameState[] | null; }
 
 export function useTurnPlayback(params: {
-  queue: GameEventBatch[];
+  queue: PresentationBatch[];
   gameId: string | null;
   acknowledgeBatch: (batchId: string) => void;
   clearQueue: () => void;
@@ -59,13 +61,18 @@ export function useTurnPlayback(params: {
     if (!beats.length) { acknowledgeBatch(batch.batchId); return; }
     generation.current += 1;
     chainStartedAt.current = performance.now();
+    // Without a valid baseState (see useRoomRealtime's handleBatchBroadcast),
+    // there's nothing safe to replay onto — narration still plays, the board
+    // just won't be beat-scoped for this one batch and falls back to live
+    // publicState the whole time (better than showing a wrong reconstruction).
+    const snapshots = batch.baseState ? buildPresentationSnapshots(batch.baseState, batch.events) : null;
     // State here intentionally follows an external queue notification.
     // oxlint-disable-next-line react/set-state-in-effect
     setBeatIndex(0);
     // oxlint-disable-next-line react/set-state-in-effect
     setSkipReady(false);
     // oxlint-disable-next-line react/set-state-in-effect
-    setActive({ batchId: batch.batchId, gameId: batch.gameId, beats });
+    setActive({ batchId: batch.batchId, gameId: batch.gameId, beats, snapshots });
   }, [active, queue, acknowledgeBatch]);
 
   // UX spec: the skip button becomes clickable 500ms after a chain starts,
@@ -179,9 +186,15 @@ export function useTurnPlayback(params: {
   }, [active, skip]);
 
   const queuedBeatCount = useMemo(() => queue.reduce((count, batch) => count + buildPlaybackBeats(batch).length, 0), [queue]);
+  const currentBeat = active?.beats[beatIndex] ?? null;
+  // The board as of the beat currently being narrated — null while nothing
+  // is playing (callers should fall back to the live publicState then) or
+  // when this batch had no valid baseState to reconstruct from.
+  const presentationState = active && currentBeat && active.snapshots ? (active.snapshots[currentBeat.lastEventSequence] ?? null) : null;
   return {
-    activeBeat: active?.beats[beatIndex] ?? null,
-    visibleBeat: active?.beats[beatIndex] ?? lastBeat,
+    activeBeat: currentBeat,
+    visibleBeat: currentBeat ?? lastBeat,
+    presentationState,
     isPlaying: active !== null,
     position: active ? beatIndex + 1 : lastCounter.position,
     total: active?.beats.length ?? lastCounter.total,
